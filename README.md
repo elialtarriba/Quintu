@@ -1,3 +1,7 @@
+# Puesta en marcha de la partida compartida
+
+Consulta [md/ACTIVAR_PARTIDA_COMPARTIDA.md](md/ACTIVAR_PARTIDA_COMPARTIDA.md). Primero publica las reglas definitivas y después actualiza GitHub.
+
 # Bingo navideño de Elisabeth
 
 Esta carpeta contiene la web terminada. No necesita instalar nada ni compilar: los archivos del juego están juntos. La carpeta md contiene la documentación detallada.
@@ -31,7 +35,7 @@ El icono es el duende sobre un fondo marrón claro cálido. Si ya habías añadi
 - Tres toques para entrar. El primero inicia la música y el vídeo.
 - Desliza sobre el bombo para girarlo. Dos toques en la manivela sacan una bola; un toque muestra ayuda.
 - Toca el bol para descubrir el número. Toca la bola grande para colocarla en el tablero.
-- Carta de bingo muestra los 27 cartones. Dos toques marcan una casilla; uno retira la ficha. La paleta cambia el color del cartón.
+- Carta de bingo muestra los 37 cartones. Dos toques marcan una casilla; uno retira la ficha. La paleta cambia el color del cartón.
 - Gira el móvil a horizontal para ver el cartón más grande. La bola y el duende están dentro de la cabecera y siguen siendo interactivos.
 - Al sacar la primera bola o marcar el primer número, el cartón queda fijado hasta iniciar una partida nueva. Si eliges un cartón después de empezar el sorteo, queda fijado al elegirlo.
 - Configuración → Frases de los números: elige una bola, escribe tu frase, escúchala y pulsa Guardar frase. Se conservará en este dispositivo y también se dirá al repetir el número.
@@ -41,7 +45,7 @@ El icono es el duende sobre un fondo marrón claro cálido. Si ya habías añadi
 - Android: menú del navegador → Instalar aplicación / Añadir a pantalla de inicio.
 - En PC/Mac también se puede jugar con ratón y teclado.
 
-Cada dispositivo guarda su propia partida y sus fichas; no se sincronizan entre jugadores. La voz española depende de las voces disponibles en el dispositivo. La app puede funcionar sin conexión tras una primera carga completa en HTTPS; el navegador puede borrar la caché. No abras index.html con doble clic: utiliza el enlace publicado.
+La partida compartida se sincroniza con Firebase y necesita conexión. La voz española depende de las voces disponibles en el dispositivo. La caché conserva recursos de la interfaz, pero la partida compartida requiere Internet. No abras index.html con doble clic: utiliza el enlace publicado.
 
 ## Archivos principales
 
@@ -59,3 +63,5 @@ Creado por Elisabeth. Disfruta de esta app y comparte la alegría. Si la utiliza
 El historial y la explicación completa están en [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). La portada muestra V2 debajo de los créditos.
 
 V2: el engranaje de la cabecera del cartón permite elegir entre 14 colores y blanco puro, además de un color personalizado.
+
+Catálogo ampliado a 37 cartones distintos. Esta entrega incluye la conexión compartida con Firebase. Antes de probarla, publica las reglas definitivas siguiendo md/ACTIVAR_PARTIDA_COMPARTIDA.md.
