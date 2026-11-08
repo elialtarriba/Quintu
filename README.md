@@ -22,15 +22,20 @@ Guarda el cambio en la rama main. GitHub Pages actualizará la web automáticame
 
 Después de publicar, cierra y vuelve a abrir la app con conexión y deja que el vídeo cargue. La app renovará también su copia para usarlo sin conexión.
 
+## Icono del móvil
+
+El icono es el duende sobre un fondo marrón claro cálido. Si ya habías añadido una versión con el icono anterior, elimina el acceso directo y vuelve a añadirlo desde el navegador tras actualizar la web.
+
 ## Jugar e instalar
 
 - Tres toques para entrar. El primero inicia la música y el vídeo.
 - Desliza sobre el bombo para girarlo. Dos toques en la manivela sacan una bola; un toque muestra ayuda.
 - Toca el bol para descubrir el número. Toca la bola grande para colocarla en el tablero.
 - Carta de bingo muestra los 27 cartones. Dos toques marcan una casilla; uno retira la ficha. La paleta cambia el color del cartón.
-- Gira el móvil a horizontal para ver el cartón más grande.
+- Gira el móvil a horizontal para ver el cartón más grande. La bola y el duende están dentro de la cabecera y siguen siendo interactivos.
+- Al sacar la primera bola o marcar el primer número, el cartón queda fijado hasta iniciar una partida nueva. Si eliges un cartón después de empezar el sorteo, queda fijado al elegirlo.
 - Configuración → Frases de los números: elige una bola, escribe tu frase, escúchala y pulsa Guardar frase. Se conservará en este dispositivo y también se dirá al repetir el número.
-- Toca la bola de nieve para ver nevar durante 30 segundos y escuchar campanitas. Dos toques encienden las ventanas y las luces de colores del árbol.
+- Toca la bola de nieve para ver nevar durante 30 segundos y escuchar campanitas. Dos toques encienden las ventanas y las luces de colores del árbol; tres toques rápidos activan un brillo mágico mucho más intenso.
 - Toca el duende para escuchar su felicitación y ver cómo saluda con una animación de poses completas. Si el dispositivo no tiene voz española, la felicitación se muestra por escrito.
 - iPhone/iPad: Safari → Compartir → Añadir a pantalla de inicio.
 - Android: menú del navegador → Instalar aplicación / Añadir a pantalla de inicio.
