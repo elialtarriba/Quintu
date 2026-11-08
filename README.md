@@ -54,6 +54,8 @@ Cada dispositivo guarda su propia partida y sus fichas; no se sincronizan entre 
 
 Creado por Elisabeth. Disfruta de esta app y comparte la alegría. Si la utilizas, menciona a Elisabeth.
 
-## Documentación de V1
+## Documentación de V2
 
-El historial y la explicación completa están en [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). La portada muestra V1 debajo de los créditos.
+El historial y la explicación completa están en [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). La portada muestra V2 debajo de los créditos.
+
+V2: el engranaje de la cabecera del cartón permite elegir entre 14 colores y blanco puro, además de un color personalizado.
