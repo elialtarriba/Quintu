@@ -1,6 +1,6 @@
 # Bingo navideño de Elisabeth
 
-Esta carpeta contiene la web terminada. No necesita instalar nada ni compilar: todos los archivos están juntos, sin subcarpetas.
+Esta carpeta contiene la web terminada. No necesita instalar nada ni compilar: los archivos del juego están juntos. La carpeta md contiene la documentación detallada.
 
 ## Publicar en GitHub
 
@@ -53,3 +53,7 @@ Cada dispositivo guarda su propia partida y sus fichas; no se sincronizan entre 
 - manifest.webmanifest, iconos y sw.js: instalación y uso sin conexión.
 
 Creado por Elisabeth. Disfruta de esta app y comparte la alegría. Si la utilizas, menciona a Elisabeth.
+
+## Documentación de V1
+
+El historial y la explicación completa están en [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). La portada muestra V1 debajo de los créditos.
