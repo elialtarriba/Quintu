@@ -1,4 +1,4 @@
-const CACHE='bingo-1794149656537';const ASSETS=["./bingo.css","./bingo.js","./bombo.png","./duende-animado.png","./globo.png","./guirnalda.png","./icon-duende.png","./index.html","./manifest.webmanifest","./pruna.mp4"];const refreshed=new Set();
+const CACHE='bingo-1794163553900';const ASSETS=["./bingo.css","./bingo.js","./bombo.png","./duende-animado.png","./duende-baile.MP4","./duende-musica.wav","./globo.png","./guirnalda.png","./icon-duende.png","./index.html","./manifest.webmanifest","./pruna.mp4"];const refreshed=new Set();
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('bingo-')&&k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==location.origin)return;
