@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function principal() { return signed() && request.auth.uid == 'YRpJxetC1sVRqrd1W6S2IsM9yms2'; }
+    function room(r) { return get(/databases/$(database)/documents/rooms/$(r)).data; }
+    function approved() { return principal() || (signed() && get(/databases/$(database)/documents/administrators/$(request.auth.uid)).data.status == 'approved'); }
+    function admin(r) { return principal() || (approved() && !room(r).get('archived',false) && room(r).get('ownerId','YRpJxetC1sVRqrd1W6S2IsM9yms2') == request.auth.uid); }
+    function validProfile(d) { return d.get('firstName','') is string && d.get('firstName','').size() <= 60 && d.get('lastName','') is string && d.get('lastName','').size() <= 100; }
+    match /administrators/{uid} {
+      allow get: if principal() || (signed() && request.auth.uid == uid);
+      allow list: if principal();
+      allow create: if signed() && request.auth.uid == uid && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.resource.data.keys().hasOnly(['email','firstName','lastName','status','createdAt'])
+        && validProfile(request.resource.data)
+        && request.resource.data.email == request.auth.token.email && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+      allow create: if principal() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['email','firstName','lastName','status','createdAt'])
+        && request.resource.data.email == request.auth.token.email && request.resource.data.status == 'approved'
+        && validProfile(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if signed() && (request.auth.uid == uid || principal())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstName','lastName']) && validProfile(request.resource.data);
+      allow update: if principal() && uid != request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['approved','suspended','removed'];
+    }
+    function member(r) { return !room(r).get('archived',false) && signed() && exists(/databases/$(database)/documents/rooms/$(r)/players/$(request.auth.uid)); }
+    function color(c) { return c is string && c.matches('^#[0-9a-fA-F]{6}$'); }
+    function validPlayer(d,r) {
+      return d.keys().hasAll(['name','card','marks','locked','round','color','chip','updatedAt'])
+        && d.keys().hasOnly(['name','card','marks','locked','round','color','chip','updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 30
+        && (d.card == null || (d.card is int && d.card >= 0 && d.card < 37))
+        && d.marks is list && d.marks.size() <= 15 && d.marks.toSet().size() == d.marks.size()
+        && d.marks.toSet().hasOnly([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90])
+        && d.locked is bool
+        && d.round is int && d.round == room(r).round
+        && color(d.color) && (d.chip in ['auto','transparent'] || color(d.chip))
+        && d.updatedAt == request.time;
+    }
+    match /rooms/{r} {
+      allow get: if signed();
+      allow list: if principal();
+      allow create: if approved() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if admin(r);
+      allow update: if (admin(r) && (principal() || request.resource.data.get('archived',false) == resource.data.get('archived',false)) && request.resource.data.get('ownerId','YRpJxetC1sVRqrd1W6S2IsM9yms2') == resource.data.get('ownerId','YRpJxetC1sVRqrd1W6S2IsM9yms2')) || (member(r)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeClaim'])
+        && resource.data.activeClaim == null && resource.data.started
+        && request.resource.data.activeClaim == request.auth.uid
+        && getAfter(/databases/$(database)/documents/rooms/$(r)/claims/$(request.auth.uid)).data.status == 'pending'
+        && getAfter(/databases/$(database)/documents/rooms/$(r)/claims/$(request.auth.uid)).data.round == resource.data.round);
+      match /players/{uid} {
+        allow get: if admin(r) || (signed() && request.auth.uid == uid);
+        allow list: if admin(r);
+        allow create: if signed() && !room(r).get('archived',false) && request.auth.uid == uid
+          && validPlayer(request.resource.data,r)
+          && request.resource.data.card == null && request.resource.data.marks.size() == 0 && request.resource.data.locked == false;
+        allow update: if admin(r) || (signed() && !room(r).get('archived',false) && request.auth.uid == uid
+          && validPlayer(request.resource.data,r)
+          && request.resource.data.name == resource.data.name
+          && (!resource.data.locked || resource.data.round != room(r).round || request.resource.data.locked)
+          && (request.resource.data.marks.size() == 0 || request.resource.data.locked)
+          && (request.resource.data.card == resource.data.card || (((!room(r).started && (resource.data.round != room(r).round || !resource.data.locked)) || resource.data.card == null)
+            && request.resource.data.card != null && request.resource.data.marks.size() == 0
+            && getAfter(/databases/$(database)/documents/rooms/$(r)/seats/$(string(request.resource.data.card))).data.uid == uid
+            && (resource.data.card == null || !existsAfter(/databases/$(database)/documents/rooms/$(r)/seats/$(string(resource.data.card)))))));
+        allow delete: if admin(r);
+      }
+      match /seats/{card} {
+        allow read: if admin(r) || member(r);
+        allow create: if member(r) && card.matches('^([0-9]|[12][0-9]|3[0-6])$')
+          && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+          && string(getAfter(/databases/$(database)/documents/rooms/$(r)/players/$(request.auth.uid)).data.card) == card;
+        allow update: if (admin(r) && (principal() || request.resource.data.get('archived',false) == resource.data.get('archived',false)) && request.resource.data.get('ownerId','YRpJxetC1sVRqrd1W6S2IsM9yms2') == resource.data.get('ownerId','YRpJxetC1sVRqrd1W6S2IsM9yms2')) || (member(r) && resource.data.uid == request.auth.uid && request.resource.data == resource.data);
+        allow delete: if admin(r) || (member(r) && resource.data.uid == request.auth.uid && !room(r).started
+          && string(getAfter(/databases/$(database)/documents/rooms/$(r)/players/$(request.auth.uid)).data.card) != card);
+      }
+      match /claims/{uid} {
+        function validClaim() {
+          let d=request.resource.data;
+          let p=get(/databases/$(database)/documents/rooms/$(r)/players/$(uid)).data;
+          return signed() && request.auth.uid == uid && member(r) && room(r).started
+            && d.keys().hasAll(['name','card','kind','status','round','requestId','createdAt'])
+            && d.keys().hasOnly(['name','card','kind','status','round','requestId','createdAt'])
+            && d.name == p.name && p.card != null && d.card == p.card
+            && d.kind in ['line','bingo'] && d.status == 'pending'
+            && d.round == room(r).round && d.requestId is string && d.requestId.size() <= 50
+            && d.createdAt == request.time
+            && getAfter(/databases/$(database)/documents/rooms/$(r)).data.activeClaim == uid;
+        }
+        allow read: if admin(r) || member(r);
+        allow create: if validClaim();
+        allow update: if admin(r) || (validClaim() && (resource.data.status != 'pending' || resource.data.round != room(r).round));
+        allow delete: if admin(r);
+      }
+    }
+  }
+}
