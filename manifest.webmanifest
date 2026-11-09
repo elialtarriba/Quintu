@@ -10,10 +10,10 @@
   "theme_color": "#153e31",
   "icons": [
     {
-      "src": "icon-duende.png",
-      "sizes": "1254x1254",
+      "src": "icon-bombo.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
