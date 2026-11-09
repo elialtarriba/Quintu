@@ -1,67 +1,42 @@
-# Puesta en marcha de la partida compartida
+# Bingo de Nadal d’Elisabeth · V7
 
-Consulta [md/ACTIVAR_PARTIDA_COMPARTIDA.md](md/ACTIVAR_PARTIDA_COMPARTIDA.md). Primero publica las reglas definitivas y después actualiza GitHub.
+Web preparada per publicar a GitHub Pages, sense instal·lar dependències ni compilar. La partida compartida necessita Internet i Firebase.
 
-# Bingo navideño de Elisabeth
+**Per activar aquesta entrega:** segueix [md/ACTIVAR_V7.md](md/ACTIVAR_V7.md). Primer publica les regles completes de Firebase; després actualitza els vuit arxius indicats a GitHub. La V7 encara no s’ha publicat automàticament.
 
-Esta carpeta contiene la web terminada. No necesita instalar nada ni compilar: los archivos del juego están juntos. La carpeta md contiene la documentación detallada.
+## Novetats
 
-## Publicar en GitHub
+- La manivela no obre instruccions: dos tocs extreuen la bola. L’ajuda és al costat de Repetir número.
+- Gnomo ballant amb fons transparent sobre el joc i música nadalenca en activar-lo.
+- Pruna conserva la veu amb la música general apagada. Si el navegador ho exigeix, apareix Reproducir Pruna.
+- Icones del bombo per a instal·lació; s’ha corregit l’arxiu absent de l’entrega anterior.
+- Noms, cognoms i correus d’administradors al panell general exclusiu d’Elisabeth. Dades antigues pendents es poden completar.
+- Retirada de jugadors amb confirmació, alliberament del cartró i resolució del seu avís pendent.
+- Entrada de jugadors amb nom, sense noms suggerits de convidats.
+- Tres manuals il·lustrats en català, amb índex navegable i retorn: jugadors, administradors i manual complet d’Elisabeth.
 
-1. Crea un repositorio en GitHub y sube TODOS los archivos de esta carpeta, sin meterlos dentro de otra carpeta.
-2. Abre **Settings → Pages**.
-3. En **Build and deployment**, elige **Deploy from a branch**.
-4. Elige la rama **main**, la carpeta **/(root)** y pulsa **Save**.
-5. Cuando termine la publicación, GitHub mostrará el enlace de tu bingo en esa misma página.
+## Manuals dins de l’app
 
-Si antes habías elegido GitHub Actions, cambia ahora a Deploy from a branch. Esta versión ya está compilada y no necesita un flujo de Actions.
+Jugadors: al costat de l’arbre de Nadal inicial i dins de la capçalera del cartró. Administradors: al seu accés i a Configuración. Elisabeth: manual complet al seu accés, a Configuración i a Administración general.
 
-Documentación: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+## Publicació i instal·lació
 
-## Cambiar el vídeo de Pruna
+Puja els arxius directament a l’arrel del repositori, sense una carpeta Bingo addicional. GitHub → Settings → Pages → Deploy from a branch → main → /(root). Conserva tots els recursos existents. La publicació de GitHub i l’antic enllaç de Sites són independents.
 
-Sustituye **pruna.mp4** por tu nuevo vídeo, conservando el mismo nombre y la extensión en minúsculas. Está al lado de index.html. Para máxima compatibilidad, exporta MP4 con vídeo H.264.
+iPhone/iPad: Safari → Compartir → Añadir a pantalla de inicio. Android: menú del navegador → Instalar aplicación / Añadir a pantalla de inicio. Ordinador: opció d’instal·lació del navegador, quan estigui disponible.
 
-Guarda el cambio en la rama main. GitHub Pages actualizará la web automáticamente. El vídeo seguirá en bucle, silenciado y acompañado de la melodía de Jingle Bells de la app.
+Si ja tens una drecera antiga sense bombo, recrea-la després d’actualitzar. No esborris les dades del navegador si vols conservar la identitat del jugador.
 
-Después de publicar, cierra y vuelve a abrir la app con conexión y deja que el vídeo cargue. La app renovará también su copia para usarlo sin conexión.
+## Canviar Pruna
 
-## Icono del móvil
+Substitueix `pruna.mp4` pel vídeo nou, conservant nom i extensió. Es recomana MP4 H.264 amb àudio. L’app reprodueix el so del mateix vídeo, independentment de l’interruptor de música general. El vídeo actual inclou veu i música mesclades. La primera reproducció pot requerir un toc.
 
-El icono es el duende sobre un fondo marrón claro cálido. Si ya habías añadido una versión con el icono anterior, elimina el acceso directo y vuelve a añadirlo desde el navegador tras actualizar la web.
+## Manteniment
 
-## Jugar e instalar
+Codi font editable de V7:
 
-- Tres toques para entrar. El primero inicia la música y el vídeo.
-- Desliza sobre el bombo para girarlo. Dos toques en la manivela sacan una bola; un toque muestra ayuda.
-- Toca el bol para descubrir el número. Toca la bola grande para colocarla en el tablero.
-- Carta de bingo muestra los 37 cartones. Dos toques marcan una casilla; uno retira la ficha. La paleta cambia el color del cartón.
-- Gira el móvil a horizontal para ver el cartón más grande. La bola y el duende están dentro de la cabecera y siguen siendo interactivos.
-- Al sacar la primera bola o marcar el primer número, el cartón queda fijado hasta iniciar una partida nueva. Si eliges un cartón después de empezar el sorteo, queda fijado al elegirlo.
-- Configuración → Frases de los números: elige una bola, escribe tu frase, escúchala y pulsa Guardar frase. Se conservará en este dispositivo y también se dirá al repetir el número.
-- Toca la bola de nieve para ver nevar durante 30 segundos y escuchar campanitas. Dos toques encienden las ventanas y las luces de colores del árbol; tres toques rápidos activan un brillo mágico mucho más intenso.
-- Toca el duende para escuchar su felicitación y ver cómo saluda con una animación de poses completas. Si el dispositivo no tiene voz española, la felicitación se muestra por escrito.
-- iPhone/iPad: Safari → Compartir → Añadir a pantalla de inicio.
-- Android: menú del navegador → Instalar aplicación / Añadir a pantalla de inicio.
-- En PC/Mac también se puede jugar con ratón y teclado.
+`/Users/elisabeth/.codex/visualizations/2026/11/09/01a1c0fe-3517-7d02-bce9-4fa24342a565/bingo-source`
 
-La partida compartida se sincroniza con Firebase y necesita conexión. La voz española depende de las voces disponibles en el dispositivo. La caché conserva recursos de la interfaz, pero la partida compartida requiere Internet. No abras index.html con doble clic: utiliza el enlace publicado.
+Historial, comprovacions i detalls a [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). Els apartats de versions anteriors són històrics; preval V7.
 
-## Archivos principales
-
-- index.html: entrada de la web.
-- bingo.js: funcionamiento del juego, melodía y efectos.
-- bingo.css: diseño adaptable a móvil, tableta y ordenador.
-- pruna.mp4: vídeo intercambiable.
-- bombo.png, duende-animado.png, globo.png, guirnalda.png: decoración.
-- manifest.webmanifest, iconos y sw.js: instalación y uso sin conexión.
-
-Creado por Elisabeth. Disfruta de esta app y comparte la alegría. Si la utilizas, menciona a Elisabeth.
-
-## Documentación de V2
-
-El historial y la explicación completa están en [md/DOCUMENTACION_BINGO.md](md/DOCUMENTACION_BINGO.md). La portada muestra V2 debajo de los créditos.
-
-V2: el engranaje de la cabecera del cartón permite elegir entre 14 colores y blanco puro, además de un color personalizado.
-
-Catálogo ampliado a 37 cartones distintos. Esta entrega incluye la conexión compartida con Firebase. Antes de probarla, publica las reglas definitivas siguiendo md/ACTIVAR_PARTIDA_COMPARTIDA.md.
+Creat per Elisabeth. Comparteix l’alegria de Nadal i menciona Elisabeth si utilitzes l’app.
