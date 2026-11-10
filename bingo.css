@@ -958,21 +958,218 @@
   }
 }
 
-/* ================= RESPUESTA TÁCTIL FLUIDA DE TODOS LOS BOTONES Y MEJORAS DE SESIÓN/PRUNA ================= */
+/* ================= V12: BOTONES UNIFICADOS CON RIBETE DORADO, COLOR MÁS CLARO Y HUNDIMIENTO AL PULSAR ================= */
 button {
-  transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.08s ease, background 0.1s ease, box-shadow 0.08s ease, filter 0.1s ease;
 }
-button:not(:disabled):active {
-  transform: scale(0.95) translateY(2px) !important;
-  filter: brightness(1.18) saturate(1.1) !important;
+
+/* Todos los botones principales (.gold-button y .status-gold-btn): ribete dorado y rojo (o verde) por dentro */
+.gold-button,
+.status-gold-btn {
+  border: 2.5px solid #e2bc64 !important;
+  background: linear-gradient(180deg, #a82235 0%, #781221 100%) !important;
+  color: #fff6dc !important;
+  text-shadow: 0 1px 2px rgba(45, 8, 14, 0.75) !important;
+  box-shadow:
+    inset 0 0 0 1.5px #f8de8e,
+    inset 0 -3px 6px rgba(65, 6, 15, 0.65),
+    0 4px 0 #8a6421,
+    0 6px 12px rgba(0, 0, 0, 0.28) !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
 }
+
+.gold-button.green,
+.status-gold-btn.active-copied {
+  background: linear-gradient(180deg, #246347 0%, #123b29 100%) !important;
+  color: #fff6dc !important;
+  box-shadow:
+    inset 0 0 0 1.5px #f8de8e,
+    inset 0 -3px 6px rgba(6, 35, 22, 0.65),
+    0 4px 0 #8a6421,
+    0 6px 12px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Efecto al pulsar: el rojo (o verde) se vuelve más claro y el botón se hunde (enfonsa) sin encoger su área táctil */
 .gold-button:not(:disabled):active,
+.status-gold-btn:not(:disabled):active {
+  background: linear-gradient(180deg, #e84c62 0%, #c1283e 100%) !important;
+  color: #ffffff !important;
+  transform: translateY(3px) !important;
+  box-shadow:
+    inset 0 0 0 2px #ffeaa6,
+    inset 0 3px 7px rgba(60, 5, 14, 0.55),
+    0 1px 0 #8a6421,
+    0 2px 4px rgba(0, 0, 0, 0.25) !important;
+}
+
+.gold-button.green:not(:disabled):active,
+.status-gold-btn.active-copied:not(:disabled):active {
+  background: linear-gradient(180deg, #39c289 0%, #1f8259 100%) !important;
+  color: #ffffff !important;
+  transform: translateY(3px) !important;
+  box-shadow:
+    inset 0 0 0 2px #ffeaa6,
+    inset 0 3px 7px rgba(6, 40, 25, 0.55),
+    0 1px 0 #8a6421,
+    0 2px 4px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Pastillas de selección (1/2/3 cartones y pestañas de cartones): mismo estilo con ribete dorado */
+.count-pill-btn,
+.multi-tab-btn {
+  border: 2px solid #dec94;
+  border-color: #d8b25c !important;
+  background: linear-gradient(180deg, #8f1d2d 0%, #68101d 100%) !important;
+  color: #fff5d6 !important;
+  border-radius: 16px !important;
+  box-shadow: inset 0 0 0 1px #f5d782, 0 3px 0 #8a6421, 0 4px 8px rgba(0, 0, 0, 0.22) !important;
+}
+.count-pill-btn.active,
+.multi-tab-btn.active {
+  background: linear-gradient(180deg, #256649 0%, #133d2a 100%) !important;
+  color: #ffffff !important;
+  border-color: #ffe28a !important;
+  box-shadow: inset 0 0 0 2px #ffe28a, 0 3px 0 #8a6421, 0 4px 10px rgba(0, 0, 0, 0.28) !important;
+}
 .count-pill-btn:not(:disabled):active,
-.multi-tab-btn:not(:disabled):active,
-.status-gold-btn:not(:disabled):active,
+.multi-tab-btn:not(:disabled):active {
+  background: linear-gradient(180deg, #e84c62 0%, #c1283e 100%) !important;
+  transform: translateY(3px) !important;
+  box-shadow: inset 0 0 0 2px #ffeaa6, inset 0 2px 5px rgba(0, 0, 0, 0.4), 0 0 0 #8a6421 !important;
+}
+.count-pill-btn.active:not(:disabled):active,
+.multi-tab-btn.active:not(:disabled):active {
+  background: linear-gradient(180deg, #39c289 0%, #1f8259 100%) !important;
+}
+
 .music-toggle:not(:disabled):active {
-  transform: scale(0.94) translateY(2px) !important;
-  box-shadow: 0 0 0 3px #ffe28a, 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+  transform: translateY(2px) !important;
+  background: linear-gradient(180deg, #e84c62, #b8253a) !important;
+  color: #fff !important;
+}
+
+/* CAPTURA 1: Barra superior en 2 líneas iguales y perfectamente alineadas en el móvil */
+.shared-status-bar {
+  padding: 10px 12px 12px !important;
+  gap: 8px !important;
+}
+.status-actions-row.is-bombo-view {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  max-width: 680px !important;
+  width: 100% !important;
+}
+.status-actions-row.is-card-view {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 8px !important;
+  max-width: 560px !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+}
+.status-actions-row.is-card-view .status-gold-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.status-gold-btn {
+  width: 100% !important;
+  min-height: 38px !important;
+  padding: 6px 8px !important;
+  font: 700 12.5px/1.15 system-ui, sans-serif !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+@media (max-width: 420px) {
+  .status-gold-btn {
+    font-size: 11.5px !important;
+    padding: 6px 5px !important;
+    gap: 4px !important;
+  }
+  .status-gold-btn span {
+    font-size: 13px !important;
+  }
+}
+
+/* CAPTURA 2: Botones de Configuración perfectamente separados y sin solaparse nunca */
+.settings-buttons-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100% !important;
+  margin: 16px 0 !important;
+}
+.settings-buttons-stack > .gold-button,
+.settings-buttons-stack > .manual-open,
+.modal .phrase-open {
+  width: 100% !important;
+  margin: 0 !important;
+  min-height: 48px !important;
+  font-size: 16px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* CAPTURA 3: Vista limpia del cartón con todos los botones alineados en 1 sola línea */
+.shared-player .card-play {
+  margin-top: 10px !important;
+}
+.shared-player .card-toolbar {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+.shared-player .card-toolbar > b {
+  text-align: center !important;
+  font: 700 14px/1.25 Georgia, serif !important;
+  color: #173d30 !important;
+}
+.card-toolbar-btns {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+.card-toolbar-btns > .gold-button,
+.card-toolbar-btns > .manual-open {
+  width: 100% !important;
+  min-height: 38px !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+.multi-cards-bar {
+  padding: 8px 10px !important;
+  margin-bottom: 10px !important;
+  justify-content: center !important;
+}
+.multi-cards-tabs {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+.multi-tab-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  padding: 7px 6px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+.admin-role-sub {
+  margin: 0 auto 12px;
+  max-width: 560px;
+  font: 13.5px/1.45 system-ui, sans-serif;
+  color: #4d3c26;
 }
 
 .welcome-pruna,
