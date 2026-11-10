@@ -7,9 +7,9 @@
 .globe-dome-clip {
   position: absolute;
   left: 9.1%;
-  top: 5.1%;
+  top: 8%;
   width: 81.8%;
-  height: 61.2%;
+  height: 54.5%;
   border-radius: 50%;
   overflow: hidden;
   pointer-events: none;
@@ -28,7 +28,7 @@
   object-fit: cover;
   object-position: 50% 56%;
   transform: scale(1.06);
-  border-radius: 50%;
+  border-radius: 0;
 }
 .globe-dome-shine {
   position: absolute;
@@ -212,6 +212,20 @@
     font-size: clamp(22px, 9.2dvh, 52px) !important;
   }
 }
+
+/* V17: nevada abundante con copos atraídos por el dedo dentro de la bola */
+.snowglobe {
+  touch-action: none;
+}
+.globe-snow-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.globe-snow { z-index: 3; }
 
 /* 5. LLUVIA DE CONFETI Y VENTANAS DE PREMIO / DECEPCIÓN */
 .confetti-rain {
@@ -1335,3 +1349,21 @@ button {
 .contact-footer-trigger{display:inline-flex;flex-direction:column;align-items:center;gap:3px;padding:0 10px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}.contact-footer-trigger:hover{color:#9b2638;text-shadow:0 0 12px #e9c978}.contact-footer-trigger small{display:block}.contact-modal{background:radial-gradient(ellipse at 50% 0%,#fffdf7,#f5e6c8 78%);border-color:#d7b86d;box-shadow:inset 0 0 0 4px #fff8e3,0 0 0 2px #967337,0 10px #604829,0 28px 70px #0007;padding:38px 26px 32px}.contact-modal .close{position:absolute;right:12px;top:12px}.contact-sparkles{display:block;margin:0 auto 10px;color:#b8903c;font-size:24px;letter-spacing:7px}.contact-modal h2{margin:8px 0 10px;color:#8d1b2b}.contact-note{color:#745b38}.contact-email-link{display:inline-flex;align-items:center;justify-content:center;margin:10px auto;padding:13px 17px;border:1.5px solid #c99d48;border-radius:22px;background:#fffaf0;color:#173d30;font:600 15px/1.3 system-ui,sans-serif;text-decoration:none;overflow-wrap:anywhere;box-shadow:0 3px 8px #70562a22}.contact-email-link:hover{background:#fff1cd}.contact-signature{margin:10px 0 0;color:#8d1b2b;font-style:italic}.master-view-toggle{width:100%;margin-top:14px}.administrator-profile-view{display:grid;justify-items:end;gap:10px}.master-password-star{width:42px;height:42px;border:1.5px solid #c99e4d;border-radius:50%;background:linear-gradient(145deg,#fff7df,#efd69d);color:#8d1b2b;font-size:21px;box-shadow:0 3px 8px #70562a24}.master-password-star:hover{transform:translateY(-1px);box-shadow:0 5px 12px #70562a36}.master-gate-modal{display:grid;gap:14px}.master-gate-modal h2{margin:4px 0}.master-password-input{width:100%;min-height:52px;padding:12px 15px;border:1.5px solid #c5a256;border-radius:15px;background:#fffdfa;color:#173d30;font:16px system-ui,sans-serif}.master-gate-error{margin:0;color:#8d1b2b;font:14px system-ui,sans-serif}.master-gate-modal .reset-actions{margin-top:4px}.permanent-delete-btn{color:#8d1b2b!important;font-weight:700}.room-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .contact-backdrop{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;align-items:flex-end;padding:10px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}.contact-modal{width:min(100%,380px);max-height:42svh;overflow:auto;margin:0 auto;border-radius:20px;padding:24px 20px 18px;box-shadow:0 6px 22px #4c351b38,inset 0 0 0 3px #fff8e3}.contact-sparkles{font-size:18px;margin-bottom:2px}.contact-modal h2{font-size:20px;margin:3px 0 5px}.contact-note,.contact-signature{font-size:13px;margin:4px 0}.contact-email-link{font-size:14px;padding:9px 13px;margin:5px auto}.lobby-actions-footer{width:100%;max-width:100%;padding:0 4px}.lobby-actions-footer .gold-button{width:100%;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25;padding-inline:14px;font-size:clamp(13px,3.8vw,18px)}.admin-config-summary{overflow-wrap:anywhere;line-height:1.3}.stat-pill-button{width:100%;font:inherit;color:inherit;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.stat-pill-button:hover,.stat-pill-button:focus-visible{transform:translateY(-2px);box-shadow:0 7px 18px #6e4b1425}.stat-toast-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:12px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#102a2333}.stat-toast{position:relative;width:min(100%,440px);max-height:55svh;overflow:auto;padding:24px 20px 18px;border:2px solid #d4b568;border-radius:20px;background:#fffaf0;box-shadow:0 8px 28px #0003}.stat-toast .close{position:absolute;right:8px;top:8px;width:34px;height:34px;font-size:20px}.stat-toast h3{margin:5px 40px 8px 0;color:#173d30;font:700 20px Georgia}.stat-toast p,.stat-toast li{font:14px/1.45 system-ui,sans-serif;color:#665239}.stat-toast ul{margin:8px 0 0;padding-left:21px}.room-loading-shell,.room-error-shell{min-height:100svh;display:grid;place-content:center;justify-items:center;gap:12px;padding:24px;text-align:center;background:#f8efdf;color:#173d30}.room-loading-shell h1,.room-error-shell h1{margin:0;color:#8d1b2b;font:700 clamp(23px,6vw,32px) Georgia}.room-loading-shell p,.room-error-shell p{max-width:32em;font:15px/1.5 system-ui,sans-serif;color:#665239}.room-error-shell .gold-button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .admin-management-details{padding-top:2px}.admin-management-details>.section-title{display:block;cursor:pointer;list-style:none;padding-right:22px;position:relative}.admin-management-details>.section-title::-webkit-details-marker{display:none}.admin-management-details>.section-title:after{content:"⌄";position:absolute;right:2px;top:0;color:#8d1b2b;font:700 22px Georgia}.admin-management-details[open]>.section-title:after{content:"⌃"}
+
+.tree-return-button{flex:0 1 auto;align-self:center;width:fit-content;max-width:min(100%,220px);min-height:38px;margin:2px auto 0;padding:7px 16px;border:1.5px solid #c3933f;border-radius:999px;background:#fffaf0;color:#705a39;font:600 13px/1.2 system-ui,sans-serif;box-shadow:0 2px 7px #70562a18;transition:background .15s ease,transform .15s ease}.tree-return-button:hover{background:#fff1cf;transform:translateY(-1px)}
+
+.snow-entry .entry-tree-button{position:relative;display:block;width:min(300px,70vw);height:clamp(180px,43svh,430px);margin:0 auto;padding:0;border:0;background:transparent;overflow:visible;isolation:isolate;cursor:pointer;touch-action:manipulation}
+.snow-entry .entry-tree-art{position:relative;z-index:1;width:100%;height:100%;transition:filter .35s ease}
+.snow-entry .entry-tree-button.lights-off .entry-tree-art{filter:brightness(.8) saturate(.82) drop-shadow(0 0 8px #8c622044)}
+.snow-entry .entry-tree-button.lights-on .entry-tree-art{filter:drop-shadow(0 0 14px #e3bd5c33)}
+.snow-entry .entry-tree-button.tree-aura .entry-tree-art{filter:drop-shadow(0 0 9px #ffe18d) drop-shadow(0 0 20px #ffd15a99) drop-shadow(0 0 34px #ffe8a355)}
+.entry-tree-lights{position:absolute;inset:0;z-index:3;pointer-events:none}
+.entry-tree-lights i{position:absolute;width:clamp(5px,1.45vw,9px);aspect-ratio:1;border-radius:50%;background:#fff6bd;box-shadow:0 0 4px 2px #fff4b8,0 0 12px 5px #ffd45a;animation:tree-light-twinkle 1.35s ease-in-out infinite alternate}
+@keyframes tree-light-twinkle{from{opacity:.55;transform:scale(.7)}to{opacity:1;transform:scale(1.35)}}
+.entry-tree-top-halo{position:absolute;z-index:4;left:35%;top:-2%;width:30%;height:17%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#fff9d8 0 9%,#ffe17a 23%,#ffc83c99 42%,transparent 73%);filter:blur(3px) drop-shadow(0 0 10px #ffdc72);mix-blend-mode:screen;animation:tree-top-halo-glow 1.4s ease-in-out infinite alternate}
+@keyframes tree-top-halo-glow{from{opacity:.7;transform:scale(.9)}to{opacity:1;transform:scale(1.12)}}
+@media (orientation:landscape) and (max-height:600px){.snow-entry .entry-tree-button{height:140px;width:180px}}
+
+.welcome-carousel .welcome-access{display:grid;grid-template-columns:max-content max-content;gap:12px;justify-content:center;width:fit-content;max-width:100%}
+.welcome-carousel .welcome-access .tree-return-button{grid-column:1/-1;width:100%;max-width:none;min-height:46px;padding:8px 18px;border:2px solid #d6ac53;border-radius:32px;background:linear-gradient(#fffdf2,#f2e2bd);box-shadow:inset 0 0 0 2px #f2d27a,0 3px #9f7934,0 5px 9px #674f252b;color:#705a39;font:600 15px/1.2 system-ui,sans-serif}
+@media (max-width:420px){.welcome-carousel .welcome-access{width:min(100%,360px);grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.welcome-carousel .welcome-access>.gold-button{min-width:0;padding-right:10px;padding-left:10px}}
