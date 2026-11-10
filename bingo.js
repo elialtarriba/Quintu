@@ -3368,18 +3368,90 @@ const Jb=["El primero en llegar a la fiesta.","Dos son compañía.","Tres deseos
   // --- audio.mjs ---
   const audio = (() => {
     
-let ctx,bus,musicBus,timer,index=0,settings={sound:true,music:true,voice:true},duck=false,bellTimers=[],bellRun=false,danceTracks=new Set(),recording=null,voiceMedia=new Set(),rolling=false,rollTimer=null,rollPulse=null,speechToken=0,currentUtterance=null;
-function syncRecording(){if(!recording)return;recording.volume=duck?.12:.45;if(musicEnabled()&&!danceTracks.size&&!voiceMedia.size&&!rolling)recording.play().catch(()=>{});else recording.pause()}
-try{const saved=JSON.parse(localStorage.getItem('bingo-elisabeth-v1')||'{}');settings={...settings,...Object.fromEntries(['sound','music','voice'].filter(k=>typeof saved[k]==='boolean').map(k=>[k,saved[k]]))};const pref=localStorage.getItem('bingo-music');if(pref!==null)settings.music=pref==='true'}catch{}
-function notifyAudio(){syncRecording();window.dispatchEvent(new CustomEvent('bingo-audio-state',{detail:{music:settings.music,sound:settings.sound}}))}
-function musicEnabled(){return settings.music&&settings.sound}
-function setMusic(enabled){settings={...settings,music:enabled,...(enabled?{sound:true}:{})};try{localStorage.setItem('bingo-music',String(enabled))}catch{};if(musicBus)musicBus.gain.value=enabled?1:0;if(bus)bus.gain.value=settings.sound?(duck?.2:1):0;window.dispatchEvent(new CustomEvent('bingo-music-change',{detail:{music:enabled,sound:settings.sound}}));notifyAudio();if(enabled)unlock()}
+let ctx,bus,musicBus,timer,index=0,settings={sound:true,music:false,voice:true},duck=false,bellTimers=[],bellRun=false,danceTracks=new Set(),recording=null,voiceMedia=new Set(),rolling=false,rollTimer=null,rollPulse=null,speechToken=0,currentUtterance=null;
+
+try{
+ const saved=JSON.parse(localStorage.getItem('bingo-elisabeth-v1')||'{}');
+ if(typeof saved.sound==='boolean')settings.sound=saved.sound;
+ if(typeof saved.voice==='boolean')settings.voice=saved.voice;
+ const pref=localStorage.getItem('bingo-music');
+ settings.music = pref === 'true';
+}catch{}
+
+function syncRecording(){
+ if(!recording)return;
+ recording.volume=duck?.12:.45;
+ if(settings.music&&settings.sound&&!danceTracks.size&&!voiceMedia.size&&!rolling){
+  recording.play().catch(()=>{});
+ }else{
+  recording.pause();
+ }
+}
+
+function notifyAudio(){
+ syncRecording();
+ window.dispatchEvent(new CustomEvent('bingo-audio-state',{detail:{music:settings.music,sound:settings.sound}}));
+}
+function musicEnabled(){
+ return settings.music&&settings.sound;
+}
+function setMusic(enabled){
+ const next=Boolean(enabled);
+ settings={...settings,music:next,...(next?{sound:true}:{})};
+ try{
+  localStorage.setItem('bingo-music',String(next));
+  const saved=JSON.parse(localStorage.getItem('bingo-elisabeth-v1')||'{}');
+  localStorage.setItem('bingo-elisabeth-v1',JSON.stringify({...saved,music:next}));
+ }catch{}
+ if(!next&&recording){
+  try{recording.pause();}catch{}
+ }
+ if(musicBus)musicBus.gain.value=next?1:0;
+ if(bus)bus.gain.value=settings.sound?(duck?.2:1):0;
+ window.dispatchEvent(new CustomEvent('bingo-music-change',{detail:{music:next,sound:settings.sound}}));
+ notifyAudio();
+ if(next)unlock();
+}
+
 // Jingle Bells, original bell synthesis; no third-party recording.
 const melody=[[64,1],[64,1],[64,2],[64,1],[64,1],[64,2],[64,1],[67,1],[60,1.5],[62,.5],[64,4],[65,1],[65,1],[65,1.5],[65,.5],[65,1],[64,1],[64,1],[64,.5],[64,.5],[64,1],[62,1],[62,1],[64,1],[62,2],[67,2],[64,1],[64,1],[64,2],[64,1],[64,1],[64,2],[64,1],[67,1],[60,1.5],[62,.5],[64,4],[65,1],[65,1],[65,1.5],[65,.5],[65,1],[64,1],[64,1],[64,.5],[64,.5],[67,1],[67,1],[65,1],[62,1],[60,4],[0,2]];
-function tone(freq,duration,vol=.18,isMusic=false){if(!ctx||!settings.sound)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+duration);o.connect(g);g.connect(isMusic?musicBus:bus);o.start();o.stop(ctx.currentTime+duration)}
+function tone(freq,duration,vol=.18,isMusic=false){if(!ctx||!settings.sound)return;if(isMusic&&!settings.music)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+duration);o.connect(g);g.connect(isMusic?musicBus:bus);o.start();o.stop(ctx.currentTime+duration)}
 function step(){const [n,d]=melody[index++%melody.length];if(settings.music&&settings.sound&&!rolling&&!bellRun&&!danceTracks.size&&!recording&&n){tone(440*2**((n-69)/12),d*.38,.13,true);tone(440*2**((n+12-69)/12),d*.22,.035,true)}timer=setTimeout(step,d*330)}
-function unlock(){if(!recording){recording=new Audio('./navidad.mp3');recording.loop=true;recording.preload='auto'}syncRecording();try{if(!ctx){ctx=new(window.AudioContext||window.webkitAudioContext)();bus=ctx.createGain();bus.connect(ctx.destination);musicBus=ctx.createGain();musicBus.gain.value=settings.music?1:0;musicBus.connect(bus);bus.gain.value=settings.sound?1:0;step()}ctx.resume().catch(()=>{})}catch{}}
-function configure(s){settings={...s};try{const pref=localStorage.getItem('bingo-music');if(pref!==null)settings.music=pref==='true'}catch{};if(musicBus)musicBus.gain.value=settings.music?1:0;notifyAudio();if(bus)bus.gain.value=s.sound?(duck?.2:1):0;if(!s.sound||!s.voice){window.speechSynthesis?.cancel();duck=false}}
+function unlock(){
+ if(!recording){
+  recording=new Audio('./navidad.mp3');
+  recording.loop=true;
+  recording.preload='auto';
+ }
+ syncRecording();
+ try{
+  if(!ctx){
+   ctx=new(window.AudioContext||window.webkitAudioContext)();
+   bus=ctx.createGain();
+   bus.connect(ctx.destination);
+   musicBus=ctx.createGain();
+   musicBus.gain.value=settings.music?1:0;
+   musicBus.connect(bus);
+   bus.gain.value=settings.sound?1:0;
+   step();
+  }
+  ctx.resume().catch(()=>{});
+ }catch{}
+}
+function configure(s){
+ const pref=localStorage.getItem('bingo-music');
+ const musicPref=pref!==null?pref==='true':settings.music;
+ settings={
+  ...settings,
+  ...(typeof s?.sound==='boolean'?{sound:s.sound}:{}),
+  ...(typeof s?.voice==='boolean'?{voice:s.voice}:{}),
+  music:musicPref
+ };
+ if(musicBus)musicBus.gain.value=settings.music?1:0;
+ notifyAudio();
+ if(bus)bus.gain.value=settings.sound?(duck?.2:1):0;
+ if(!settings.sound||!settings.voice){window.speechSynthesis?.cancel();duck=false}
+}
 function thud(){unlock();tone(100,.23,.65);tone(55,.3,.45)}
 function chime(){unlock();tone(880,.5,.18);setTimeout(()=>tone(1320,.6,.1),90)}
 function speak(text,onUnavailable=()=>{}){
@@ -3394,11 +3466,20 @@ function stopSpeech(){speechToken++;currentUtterance=null;window.speechSynthesis
 function roll(duration=900){
  unlock();clearTimeout(rollTimer);if(!rolling){rolling=true;stopSpeech();bellTimers.forEach(clearTimeout);bellTimers=[];bellRun=false;for(const m of danceTracks)m.muted=true;syncRecording();rollPulse=setInterval(()=>{if(!settings.sound||!ctx)return;const length=.06,buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*length),ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/(data.length*.18));const node=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();node.buffer=buffer;filter.type='bandpass';filter.frequency.value=400+Math.random()*1000;gain.gain.value=.24;node.connect(filter);filter.connect(gain);gain.connect(bus);node.start();tone(180+Math.random()*170,.045,.07)},65)}rollTimer=setTimeout(stopRoll,duration)
 }
-function stopRoll(){clearTimeout(rollTimer);clearInterval(rollPulse);rolling=false;for(const m of danceTracks)m.muted=!musicEnabled();syncRecording()}
+function stopRoll(){clearTimeout(rollTimer);clearInterval(rollPulse);rolling=false;for(const m of danceTracks)m.muted=!settings.sound;syncRecording()}
 function bells(){unlock();bellTimers.forEach(clearTimeout);bellTimers=[];bellRun=false;if(!settings.sound)return;bellRun=true;let at=0;for(const [n,d] of melody.slice(0,25)){const delay=at;if(n)bellTimers.push(setTimeout(()=>{const f=440*2**((n+12-69)/12);tone(f,2.4,.12);tone(f*2,1.4,.028);tone(f*3,.7,.012)},delay));at+=d*290}bellTimers.push(setTimeout(()=>{bellRun=false;bellTimers=[]},at+2400))}
 function greet(onEnd){if(!settings.sound||!window.speechSynthesis)return false;const synth=window.speechSynthesis,voice=synth.getVoices().find(v=>v.lang.toLowerCase().startsWith('es'));if(!voice)return false;synth.cancel();const u=new SpeechSynthesisUtterance('¡Ho, ho, ho!… ¡Feliz Navidad!');u.lang='es-ES';u.voice=voice;u.rate=.92;u.pitch=.9;duck=true;if(bus)bus.gain.value=.2;const done=()=>{duck=false;configure(settings);onEnd()};u.onend=done;u.onerror=done;synth.speak(u);return true}
-function danceMusic(media,active){if(active)danceTracks.add(media);else{danceTracks.delete(media);media.pause()}media.muted=!musicEnabled()||rolling;syncRecording();}
-function prunaVoice(media,active){if(active){voiceMedia.add(media);media.muted=false;media.volume=1}else{voiceMedia.delete(media);media.pause()}syncRecording()}
+function danceMusic(media,active){
+ if(active)danceTracks.add(media);
+ else{danceTracks.delete(media);media.pause();}
+ media.muted=!settings.sound||rolling;
+ syncRecording();
+}
+function prunaVoice(media,active){
+ if(active){voiceMedia.add(media);media.muted=!settings.sound;media.volume=1;}
+ else{voiceMedia.delete(media);media.pause();}
+ syncRecording();
+}
 function disappointment(){
  unlock();
  if(!ctx||!settings.sound)return;
@@ -3454,6 +3535,7 @@ function fanfare(){
 const app=initializeApp({apiKey:'AIzaSyAXgDrohvF8HVccS2A985CGUknj_YSf1zQ',authDomain:'bingo-de-eli.firebaseapp.com',projectId:false?'demo-bingo-eli':'bingo-de-eli',storageBucket:'bingo-de-eli.firebasestorage.app',messagingSenderId:'804536116694',appId:'1:804536116694:web:7dd4d1edeb80f169e43077'});
 const auth=getAuth(app),db=getFirestore(app);
 if(false){connectAuthEmulator(auth,'http://127.0.0.1:9199',{disableWarnings:true});connectFirestoreEmulator(db,'127.0.0.1',8185);}
+function getDocs(colRef){return new Promise((resolve,reject)=>{let off=()=>{};off=onSnapshot(colRef,snap=>{try{off()}catch{}resolve(snap)},err=>{try{off()}catch{}reject(err)})});}
 const roomRef=id=>doc(db,'rooms',id);
 const playerRef=(id,uid)=>doc(db,'rooms',id,'players',uid);
 function friendlyError(e){if(e.code==='auth/email-already-in-use')return 'Este correo ya tiene una cuenta. Pulsa Ya tengo cuenta para entrar o recuperar tu contraseña.';if(e.code==='auth/weak-password')return 'Escoge una contraseña de al menos seis caracteres.';if(e.code==='auth/invalid-email')return 'Revisa el correo electrónico.';if(e.code==='auth/admin-restricted-operation')return 'Para entrar como jugador invitado, debes activar "Anónimo" en Firebase Console (Authentication > Sign-in method > Anónimo). Si eres administradora, ¡puedes entrar y jugar directamente con tu cuenta!';if(e.code==='permission-denied')return 'Firebase no permite esta acción. Comprueba que la partida esté activa.';if(e.code==='auth/invalid-credential')return 'El correo o la contraseña no son correctos.';if(e.code==='auth/network-request-failed'||e.code==='unavailable')return 'No hay conexión con Firebase. Inténtalo de nuevo cuando vuelva Internet.';return e.message||'No se ha podido completar la acción.'}
@@ -3468,7 +3550,7 @@ const removePlayer=(id,uid)=>removePlayerRecord(db,id,uid);
     return {
       ADMIN_UID, auth, db, signInAnonymously, signInWithEmailAndPassword, signOut,
       onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail,
-      doc, collection, getDoc, setDoc, onSnapshot, runTransaction, serverTimestamp,
+      doc, collection, getDoc, getDocs, setDoc, onSnapshot, runTransaction, serverTimestamp,
       roomRef, playerRef, friendlyError, registerHost, createRoom, joinRoom,
       pickCard, saveGame, requestPrize, removePlayerRecord, removePlayer
     };
@@ -3552,7 +3634,7 @@ function SnowGlobe({className=''}){
     audio.chime();
     lightTimer.current=setTimeout(()=>setStep(0),45000);
    }else if(next===3){
-    audio.setMusic(true);
+    
     audio.bells();
     blizzard();
     lightTimer.current=setTimeout(()=>setStep(0),60000);
@@ -3591,11 +3673,10 @@ function Gnome({className='',autoGreet=false,onReady}){
  useEffect(()=>{
   const music=new Audio(A+'duende-musica.wav');
   music.preload='auto';
-  music.loop=true;
+  music.loop=false;
   track.current=music;
-  const update=()=>{music.muted=!audio.musicEnabled()};
+  const update=e=>{if(e?.detail&&typeof e.detail.sound==='boolean')music.muted=!e.detail.sound;};
   window.addEventListener('bingo-audio-state',update);
-  update();
   return()=>{
    audio.danceMusic(music,false);
    music.pause();
@@ -3615,10 +3696,10 @@ function Gnome({className='',autoGreet=false,onReady}){
   if(!v||!m||v.paused)return;
   audio.danceMusic(m,true);
   const drift=Math.abs(m.currentTime-v.currentTime);
-  if(force||(v.currentTime<0.3&&m.currentTime>6.5)||drift>0.42){
+  if(force||drift>0.42){
    try{m.currentTime=v.currentTime;}catch{}
   }
-  if(m.paused)m.play().catch(()=>{});
+  if(m.paused&&!m.ended)m.play().catch(()=>{});
  }
 
  function stop(){
@@ -3636,7 +3717,6 @@ function Gnome({className='',autoGreet=false,onReady}){
    audio.danceMusic(m,true);
    try{m.currentTime=0;}catch{}
   }
-  audio.setMusic(true);
   setPlaying(true);
   if(v){
    try{v.currentTime=0;}catch{}
@@ -3651,12 +3731,6 @@ function Gnome({className='',autoGreet=false,onReady}){
 
  function dance(){
   if(playing){
-   if(autoGreet){
-    audio.unlock();
-    audio.setMusic(true);
-    sync(true);
-    return;
-   }
    stop();
    return;
   }
@@ -3664,7 +3738,7 @@ function Gnome({className='',autoGreet=false,onReady}){
  }
 
  return (
-  React.createElement("button",{type:"button",className:'gnome friend '+className+(playing?' dancing':' idle'),onClick:dance,"aria-label":playing?"Duende bailando: toca para parar":"Duende: toca para verlo bailar al son de la música"},React.createElement("span",{className:"gnome-sprite","aria-hidden":"true"}),React.createElement("video",{ref:video,className:"gnome-dance-video",src:A+'duende-baile.MP4',muted:true,playsInline:true,loop:true,preload:"auto",onPlaying:()=>{sync(true);onReady?.();},onSeeked:()=>sync(true),onTimeUpdate:()=>sync(false),onPause:()=>{if(track.current&&!playing)audio.danceMusic(track.current,false)},onError:()=>{if(playing){setFailed(true);stop();}},"aria-label":"Duende bailando"}),playing&&!failed&&React.createElement(TransparentDance,{video:video,active:playing&&!failed}),failed&&React.createElement("span",{className:"greeting",role:"status"},"¡Feliz Navidad!"))
+  React.createElement("button",{type:"button",className:'gnome friend '+className+(playing?' dancing':' idle'),onClick:dance,"aria-label":playing?"Duende bailando: toca para parar":"Duende: toca para verlo bailar al son de la música"},React.createElement("span",{className:"gnome-sprite","aria-hidden":"true"}),React.createElement("video",{ref:video,className:"gnome-dance-video",src:A+'duende-baile.MP4',muted:true,playsInline:true,preload:"auto",onPlaying:()=>{sync(true);onReady?.();},onSeeked:()=>sync(true),onTimeUpdate:()=>sync(false),onEnded:stop,onPause:()=>{if(track.current&&!playing)audio.danceMusic(track.current,false)},onError:()=>{if(playing){setFailed(true);stop();}},"aria-label":"Duende bailando"}),playing&&!failed&&React.createElement(TransparentDance,{video:video,active:playing&&!failed}),failed&&React.createElement("span",{className:"greeting",role:"status"},"¡Feliz Navidad!"))
  );
 }
 function Greeting({onClose}){
@@ -3898,7 +3972,7 @@ function ManualButton({role='player',compact=false}){
 
  return (
   React.createElement(React.Fragment,null,React.createElement("button",{type:"button",className:'gold-button green manual-open '+(compact?'compact':''),onClick:openManual},btnInfo.buttonLabel),open&&createPortal(
-    React.createElement("div",{className:"manual-overlay",role:"dialog","aria-modal":"true","aria-label":current.title,onClick:()=>setOpen(false)},React.createElement("article",{className:"manual-book",ref:bookRef,onClick:e=>e.stopPropagation()},React.createElement("header",{className:"manual-topbar"},React.createElement("div",{className:"manual-topbar-left"},React.createElement("span",{className:"manual-version-tag"},"✦ ",current.badge," · V10"),React.createElement("button",{type:"button",className:"manual-quick-index-btn",onClick:scrollToTop},"↑ Índice"),role==='owner'&&(
+    React.createElement("div",{className:"manual-overlay",role:"dialog","aria-modal":"true","aria-label":current.title,onClick:()=>setOpen(false)},React.createElement("article",{className:"manual-book",ref:bookRef,onClick:e=>e.stopPropagation()},React.createElement("header",{className:"manual-topbar"},React.createElement("div",{className:"manual-topbar-left"},React.createElement("span",{className:"manual-version-tag"},"✦ ",current.badge," · V11"),React.createElement("button",{type:"button",className:"manual-quick-index-btn",onClick:scrollToTop},"↑ Índice"),role==='owner'&&(
          React.createElement("div",{className:"manual-switcher-pills"},[['player','Manual 1'],['host','Manual 2'],['owner','Manual 3']].map(([r,label])=>(
            React.createElement("button",{key:r,type:"button",className:'manual-switch-pill '+(activeRole===r?'active':''),onClick:()=>{setActiveRole(r);scrollToTop();}},label)
           )))
@@ -3908,7 +3982,7 @@ function ManualButton({role='player',compact=false}){
         React.createElement("section",{className:"manual-chapter visual-poster-chapter",id:c.id,key:c.id},React.createElement("div",{className:"poster-header"},React.createElement("span",{className:"poster-icon"},c.icon),React.createElement("h2",null,c.title)),React.createElement("div",{className:"poster-visual-stage"},c.visual),c.bullets.length>0&&(
           React.createElement("ul",{className:"poster-bullets"},c.bullets.map((b,idx)=>React.createElement("li",{key:idx},b)))
          ),React.createElement("div",{className:"chapter-footer-nav"},React.createElement("button",{type:"button",className:"manual-back-to-index-btn",onClick:scrollToTop},"↑ Volver al índice")))
-       ))),React.createElement("button",{type:"button",className:"manual-floating-index-btn",onClick:scrollToTop,title:"Subir al índice"},"↑ Índice"),React.createElement("footer",{className:"manual-footer-note"},"Creado con cariño por Elisabeth · V10"))),
+       ))),React.createElement("button",{type:"button",className:"manual-floating-index-btn",onClick:scrollToTop,title:"Subir al índice"},"↑ Índice"),React.createElement("footer",{className:"manual-footer-note"},"Creado con cariño por Elisabeth · V11"))),
     document.body
    ))
  );
@@ -4021,18 +4095,43 @@ function AdminAccounts({onClose,onEnterRoom}){
 
 
 function PrunaVideo(){
- const ref=useRef(),[blocked,setBlocked]=useState(false);
+ const ref=useRef(),[playing,setPlaying]=useState(false);
  useEffect(()=>{
   const v=ref.current;
   if(!v)return;
-  v.muted=false;v.volume=1;
-  v.play().catch(()=>setBlocked(true));
+  v.muted=false;
+  v.volume=1;
+  v.currentTime=0;
+  v.play().then(()=>{
+   setPlaying(true);
+   audio.prunaVoice(v,true);
+  }).catch(()=>{
+   setPlaying(false);
+  });
   return()=>audio.prunaVoice(v,false);
  },[]);
+
+ function togglePruna(){
+  audio.unlock();
+  const v=ref.current;
+  if(!v)return;
+  if(!v.paused&&!v.ended){
+   v.pause();
+   setPlaying(false);
+   audio.prunaVoice(v,false);
+  }else{
+   if(v.ended||v.currentTime>=v.duration-0.1)v.currentTime=0;
+   v.muted=false;
+   v.volume=1;
+   v.play().then(()=>{
+    setPlaying(true);
+    audio.prunaVoice(v,true);
+   }).catch(()=>{});
+  }
+ }
+
  return (
-  React.createElement("div",{className:"pruna-player"},React.createElement("video",{ref:ref,className:"pruna-page",src:"./pruna.mp4",loop:true,playsInline:true,"aria-label":"Pruna bailando",onPlay:()=>{audio.prunaVoice(ref.current,true);setBlocked(false);},onPause:()=>audio.prunaVoice(ref.current,false)}),blocked && (
-    React.createElement("button",{type:"button",className:"gold-button",onClick:()=>{audio.unlock();ref.current?.play().catch(()=>setBlocked(true));}},"Reproducir Pruna")
-   ))
+  React.createElement("div",{className:"pruna-player",onClick:togglePruna,role:"button",tabIndex:0,onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePruna();}},"aria-label":playing?'Pruna bailando: toca para parar':'Pruna: toca para reproducir'},React.createElement("video",{ref:ref,className:"pruna-page",src:"./pruna.mp4",playsInline:true,preload:"auto","aria-label":"Pruna bailando",onPlay:()=>{setPlaying(true);audio.prunaVoice(ref.current,true);},onPause:()=>{setPlaying(false);audio.prunaVoice(ref.current,false);},onEnded:()=>{setPlaying(false);audio.prunaVoice(ref.current,false);}}),React.createElement("span",{className:"pruna-tap-badge","aria-hidden":"true"},playing?'⏸ Toca para parar':'▶ Toca para ver a Pruna'))
  );
 }
 
@@ -4041,7 +4140,7 @@ function WelcomeCarousel({onEnter,onAdmin}){
  const start=useRef(null);
 
  function handlePointerDown(e){
-  if(e.target.closest('.snowglobe') || e.target.closest('video') || e.target.closest('button')) return;
+  if(e.target.closest('.snowglobe') || e.target.closest('video') || e.target.closest('button') || e.target.closest('.pruna-player')) return;
   start.current={x:e.clientX, y:e.clientY};
  }
 
@@ -4056,7 +4155,11 @@ function WelcomeCarousel({onEnter,onAdmin}){
  }
 
  return (
-  React.createElement("main",{className:"welcome-carousel"},React.createElement("p",{className:"eyebrow"},"UNA TRADICIÓN · UN POQUITO DE MAGIA"),React.createElement("h1",{className:"intro-title"},"La Navidad",React.createElement("br",null),"se juega ",React.createElement("em",null,"juntos.")),React.createElement("div",{className:"carousel-stage",onPointerDown:handlePointerDown,onPointerUp:handlePointerUp,onPointerCancel:()=>start.current=null},page===0 ? React.createElement(Gnome,{className:"carousel-friend"}) : page===1 ? React.createElement(SnowGlobe,{className:"carousel-friend"}) : React.createElement(PrunaVideo,null)),React.createElement("p",{className:"carousel-hint"},page===0 ? 'Toca al duende para bailar · Desliza para descubrir más' : page===1 ? '1 toque: luz · 2: más luz · 3: cobra vida. Desliza sobre la bola para que nieve.' : 'Pruna también celebra la Navidad'),React.createElement("nav",{className:"carousel-pages","aria-label":"Páginas de bienvenida"},['Duende','Bola de nieve','Pruna'].map((name,i)=>(
+  React.createElement("main",{className:"welcome-carousel"},React.createElement("p",{className:"eyebrow"},"UNA TRADICIÓN · UN POQUITO DE MAGIA"),React.createElement("h1",{className:"intro-title"},"La Navidad",React.createElement("br",null),"se juega ",React.createElement("em",null,"juntos.")),React.createElement("div",{className:"carousel-stage",onPointerDown:handlePointerDown,onPointerUp:handlePointerUp,onPointerCancel:()=>start.current=null},page===0 ? React.createElement(PrunaVideo,null) : page===1 ? React.createElement(SnowGlobe,{className:"carousel-friend"}) : React.createElement(Gnome,{className:"carousel-friend"})),React.createElement("p",{className:"carousel-hint"},page===0
+     ? 'Toca a Pruna para reproducir o parar · Desliza para descubrir más'
+     : page===1
+     ? '1 toque: luz · 2: más luz · 3: cobra vida. Desliza sobre la bola para que nieve.'
+     : 'Toca al duende para verlo bailar (toca otra vez para parar)'),React.createElement("nav",{className:"carousel-pages","aria-label":"Páginas de bienvenida"},['Pruna','Bola de nieve','Duende'].map((name,i)=>(
      React.createElement("button",{key:name,type:"button",onClick:()=>setPage(i),"aria-label":'Ver '+name,"aria-current":page===i?'page':undefined},React.createElement("span",null),page===i && React.createElement("small",null,name))
     ))),React.createElement("div",{className:"welcome-access"},React.createElement("button",{type:"button",className:"gold-button",onClick:()=>{
       try{ audio.unlock(); }catch{}
@@ -4231,29 +4334,43 @@ function Celebration({event,isAdmin,onCheckClaim,onClose}){
 }
 
 function LobbyPruna(){
- const [zoomed,setZoomed]=useState(false),[blocked,setBlocked]=useState(false),ref=useRef();
+ const [playing,setPlaying]=useState(false),[blocked,setBlocked]=useState(false),ref=useRef();
  useEffect(()=>{
   const v=ref.current;if(!v)return;
+  v.loop=false;
   v.muted=false;v.volume=1;
-  v.play().catch(()=>{v.muted=true;v.play().catch(()=>setBlocked(true));});
+  v.play().then(()=>setPlaying(true)).catch(()=>{
+   v.muted=true;
+   v.play().then(()=>setPlaying(true)).catch(()=>{setBlocked(true);setPlaying(false);});
+  });
   return()=>audio.prunaVoice(v,false);
  },[]);
  function toggle(){
-  audio.unlock();const v=ref.current;
-  if(v&&v.muted){v.muted=false;v.volume=1;v.play().catch(()=>{});}
-  setZoomed(z=>!z);
+  audio.unlock();
+  const v=ref.current;if(!v)return;
+  v.loop=false;
+  if(!v.paused&&!v.ended){
+   v.pause();
+   audio.prunaVoice(v,false);
+   setPlaying(false);
+  }else{
+   if(v.ended||v.currentTime>=v.duration-0.05)v.currentTime=0;
+   v.muted=false;v.volume=1;
+   v.play().then(()=>{setPlaying(true);setBlocked(false);}).catch(()=>{});
+  }
  }
  return (
-  React.createElement("div",{className:"lobby-pruna-wrap "+(zoomed?'is-zoomed':''),onClick:toggle,title:zoomed?"Toca para reducir el vídeo":"Toca para ver a Pruna más grande"},React.createElement("div",{className:"lobby-pruna-box"},React.createElement("video",{ref:ref,className:"lobby-pruna-media",src:"./pruna.mp4",autoPlay:true,loop:true,playsInline:true,"aria-label":"Pruna bailando",onPlay:()=>{if(ref.current&&!ref.current.muted)audio.prunaVoice(ref.current,true);setBlocked(false);},onPause:()=>{if(ref.current)audio.prunaVoice(ref.current,false);}}),blocked&&React.createElement("button",{className:"gold-button compact pruna-unblock-btn",onClick:e=>{e.stopPropagation();audio.unlock();if(ref.current){ref.current.muted=false;ref.current.volume=1;ref.current.play().catch(()=>{});}setBlocked(false);}},"▶ Reproducir Pruna")),React.createElement("p",{className:"lobby-feature-hint"},zoomed?"✦ Toca el vídeo para reducirlo ✦":"✦ Toca a Pruna para verla más grande ✦"))
+  React.createElement("div",{className:"lobby-pruna-wrap",onClick:toggle,role:"button",tabIndex:0,onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}},title:playing?"Toca a Pruna para parar":"Toca a Pruna para reproducir"},React.createElement("div",{className:"lobby-pruna-box"},React.createElement("video",{ref:ref,className:"lobby-pruna-media",src:"./pruna.mp4",playsInline:true,"aria-label":"Pruna bailando",onPlay:()=>{setPlaying(true);if(ref.current&&!ref.current.muted)audio.prunaVoice(ref.current,true);setBlocked(false);},onPause:()=>{setPlaying(false);if(ref.current)audio.prunaVoice(ref.current,false);},onEnded:()=>{setPlaying(false);if(ref.current)audio.prunaVoice(ref.current,false);}}),React.createElement("span",{className:'pruna-tap-badge '+(playing?'is-playing':'is-paused')},playing?'⏸ Toca para parar':'▶ Toca para ver a Pruna'),blocked&&React.createElement("button",{type:"button",className:"gold-button compact pruna-unblock-btn",onClick:e=>{e.stopPropagation();toggle();}},"▶ Reproducir Pruna")),React.createElement("p",{className:"lobby-feature-hint"},playing?"✦ Toca a Pruna si quieres pararla ✦":"✦ Toca a Pruna para volver a verla ✦"))
  );
 }
 
 function SharedBingo({HostApp}){
  const [invitation,setInvitation]=useState(()=>new URLSearchParams(location.search).get('partida')?.trim().toUpperCase()||'');
  const [register,setRegister]=useState(false),[accounts,setAccounts]=useState(false),[intro,setIntro]=useState(()=>new URLSearchParams(location.search).get('partida')?.trim()?3:0);
- const [user,setUser]=useState(undefined),[roomId,setRoomId]=useState(''),[room,setRoom]=useState(null),[players,setPlayers]=useState([]),[player,setPlayer]=useState(null),[seats,setSeats]=useState([]),[claims,setClaims]=useState([]),[error,setError]=useState(''),[working,setWorking]=useState(false),[online,setOnline]=useState(navigator.onLine),[ready,setReady]=useState(false),[mode,setMode]=useState('guest'),[code,setCode]=useState(new URLSearchParams(location.search).get('partida')?.trim().toUpperCase()||readStored('bingo-room')),[name,setName]=useState(readStored('bingo-name')),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[settings,setSettings]=useState(false),[dismissed,setDismissed]=useState(''),[review,setReview]=useState(null),[hostKey,setHostKey]=useState(0),[showRoster,setShowRoster]=useState(false);
+ const [user,setUser]=useState(undefined),[roomId,setRoomId]=useState(''),[room,setRoom]=useState(null),[players,setPlayers]=useState([]),[player,setPlayer]=useState(null),[seats,setSeats]=useState([]),[claims,setClaims]=useState([]),[error,setError]=useState(''),[working,setWorking]=useState(false),[online,setOnline]=useState(navigator.onLine),[ready,setReady]=useState(false),[mode,setMode]=useState('guest'),[code,setCode]=useState(new URLSearchParams(location.search).get('partida')?.trim().toUpperCase()||readStored('bingo-room')||readStored('bingo-last-room')),[name,setName]=useState(readStored('bingo-name')),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[settings,setSettings]=useState(false),[dismissed,setDismissed]=useState(''),[review,setReview]=useState(null),[hostKey,setHostKey]=useState(0),[showRoster,setShowRoster]=useState(false);
  const [approval,setApproval]=useState(null),[firstName,setFirstName]=useState(''),[lastName,setLastName]=useState(''),[remove,setRemove]=useState(null),[removed,setRemoved]=useState(false),[adminTab,setAdminTab]=useState('bombo'),[copiedURL,setCopiedURL]=useState('');
- const [desiredCount,setDesiredCount]=useState(1),[extraCards,setExtraCards]=useState([]),[marksByCard,setMarksByCard]=useState({}),[pickingCards,setPickingCards]=useState(false),[draftCards,setDraftCards]=useState([]),[activeCardIdx,setActiveCardIdx]=useState(0),[viewAllCards,setViewAllCards]=useState(true);
+ const [desiredCount,setDesiredCount]=useState(1),[extraCards,setExtraCards]=useState([]),[marksByCard,setMarksByCard]=useState({}),[pickingCards,setPickingCards]=useState(false),[draftCards,setDraftCards]=useState([]),[activeCardIdx,setActiveCardIdx]=useState(0),[viewAllCards,setViewAllCards]=useState(true),[localPrimaryCard,setLocalPrimaryCard]=useState(null);
+ const [lastRoom,setLastRoom]=useState(()=>readStored('bingo-last-room')||readStored('bingo-room')),[sessionNotice,setSessionNotice]=useState(''),[emptyRoomPrompt,setEmptyRoomPrompt]=useState('');
  const admin=!!user&&!user.isAnonymous,taps=useRef({}),lastGame=useRef(null),syncing=useRef(false);
 
  useEffect(()=>net.onAuthStateChanged(net.auth,setUser),[]);
@@ -4267,17 +4384,43 @@ function SharedBingo({HostApp}){
   return()=>{window.removeEventListener('online',up);window.removeEventListener('offline',up)};
  },[]);
 
+ // Salvavidas para que ningún botón se quede bloqueado jamás
+ useEffect(()=>{
+  if(!working)return;
+  const t=setTimeout(()=>setWorking(false),4500);
+  return()=>clearTimeout(t);
+ },[working]);
+
  const fail=e=>setError(net.friendlyError(e));
- async function action(fn){if(working)return;setError('');setWorking(true);try{await fn()}catch(e){fail(e)}finally{setWorking(false)}}
+ async function action(fn){
+  if(working)return;
+  setError('');
+  setWorking(true);
+  try{
+   await Promise.race([
+    fn(),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('La operación está tardando demasiado. Comprueba tu conexión e inténtalo de nuevo.')),5500))
+   ]);
+  }catch(e){
+   fail(e);
+  }finally{
+   setWorking(false);
+  }
+ }
 
  useEffect(()=>{
   if(!roomId||!user)return;
-  setReady(false);
+  setReady(true);
   const off=net.onSnapshot(net.roomRef(roomId),{includeMetadataChanges:true},snap=>{
-   if(!snap.exists()){setError('La partida no existe.');return;}
+   if(!snap.exists()){
+    setRoomId('');
+    setRoom(null);
+    setSessionNotice(`ℹ️ La partida ${roomId} ya no existe o ha finalizado.`);
+    return;
+   }
    const data=snap.data();
    setRoom(data);
-   setReady(!snap.metadata.fromCache);
+   setReady(true);
    if(!lastGame.current)lastGame.current={drawn:data.drawn,pending:data.pending,round:data.round};
    if(admin&&!data.started){
     net.setDoc(net.roomRef(roomId),{started:true},{merge:true}).catch(()=>{});
@@ -4285,13 +4428,13 @@ function SharedBingo({HostApp}){
   },fail);
   const offP=admin
    ? net.onSnapshot(net.collection(net.db,'rooms',roomId,'players'),s=>{const list=s.docs.map(d=>({uid:d.id,...d.data()}));setPlayers(list);const me=list.find(d=>d.uid===user.uid);setPlayer(me||null);},fail)
-   : net.onSnapshot(net.playerRef(roomId,user.uid),s=>{setPlayer(s.data());if(!s.exists())setRemoved(true)},fail);
+   : net.onSnapshot(net.playerRef(roomId,user.uid),s=>{setPlayer(s.data()||null);if(!s.exists())setRemoved(true)},fail);
   const offS=net.onSnapshot(net.collection(net.db,'rooms',roomId,'seats'),s=>setSeats(s.docs.map(d=>({id:Number(d.id),...d.data()}))),fail);
   const offC=net.onSnapshot(net.collection(net.db,'rooms',roomId,'claims'),s=>setClaims(s.docs.map(d=>({uid:d.id,...d.data()}))),fail);
   return()=>{off();offP();offS();offC()};
  },[roomId,user?.uid,admin]);
 
- function openRoom(id,targetTab='bombo'){
+ function openRoom(id,targetTab='bombo',notice=''){
   const cleanId=id.trim().toUpperCase();
   setRemoved(false);
   setAdminTab(targetTab);
@@ -4300,14 +4443,25 @@ function SharedBingo({HostApp}){
   setPlayer(null);
   setClaims([]);
   setCode(cleanId);
+  setLastRoom(cleanId);
+  setEmptyRoomPrompt('');
+  if(notice)setSessionNotice(notice);
   setRoomId(cleanId);
   try{
    localStorage.setItem('bingo-room',cleanId);
+   localStorage.setItem('bingo-last-room',cleanId);
    if(name)localStorage.setItem('bingo-name',name);
   }catch{}
  }
 
- function leaveGameCompletely(){
+ function closeSession(){
+  audio.thud();
+  const savedRoom=roomId||code||lastRoom;
+  if(savedRoom){
+   setLastRoom(savedRoom);
+   setCode(savedRoom);
+   try{localStorage.setItem('bingo-last-room',savedRoom);}catch{}
+  }
   setRoomId('');
   setRoom(null);
   setPlayer(null);
@@ -4315,8 +4469,67 @@ function SharedBingo({HostApp}){
   setReview(null);
   setRemoved(false);
   setSettings(false);
+  setPickingCards(false);
+  lastGame.current=null;
+  try{
+   localStorage.removeItem('bingo-room');
+  }catch{}
+  setSessionNotice(savedRoom?`🔒 Has cerrado la sesión. Tu última sala (${savedRoom}) está guardada por si quieres volver a entrar.`:'🔒 Has cerrado la sesión.');
+  setIntro(3);
+ }
+
+ async function reconnectSession(targetId,targetTab='card',forceIfEmpty=false){
+  const cleanId=(targetId||lastRoom||code||'').trim().toUpperCase();
+  if(!cleanId)throw Error('Escribe el código de la partida.');
+  if(!net.auth.currentUser)await net.signInAnonymously(net.auth);
+  const rSnap=await net.getDoc(net.roomRef(cleanId));
+  if(!rSnap.exists()||rSnap.data()?.archived){
+   setEmptyRoomPrompt('');
+   setSessionNotice(`⚠️ En la partida ${cleanId} ya no hay nadie (la sala ha terminado o no existe).`);
+   return;
+  }
+  const rData=rSnap.data();
+  const seatsSnap=await net.getDocs(net.collection(net.db,'rooms',cleanId,'seats'));
+  let activeCount=seatsSnap.size;
+  if(admin){
+   try{
+    const pSnap=await net.getDocs(net.collection(net.db,'rooms',cleanId,'players'));
+    activeCount=Math.max(activeCount,pSnap.size);
+   }catch{}
+  }
+  const hasPeopleOrGame = activeCount > 0 || (rData.drawn?.length || 0) > 0;
+  if(!hasPeopleOrGame && !forceIfEmpty){
+   setEmptyRoomPrompt(cleanId);
+   setSessionNotice(`ℹ️ En la sala ${cleanId} ahora mismo no hay nadie dentro (0 participantes con cartón).`);
+   return;
+  }
+  setEmptyRoomPrompt('');
+  if(targetTab==='card'){
+   const playerName=(name||(user?.uid===net.ADMIN_UID?'Elisabeth':(firstName||'Jugador'))).trim();
+   await net.joinRoom(cleanId,playerName);
+  }
+  const msg = activeCount > 0
+   ? `✅ Has entrado en la sala ${cleanId}. Hay ${activeCount} ${activeCount===1?'participante':'participantes'} dentro.`
+   : `✅ Has entrado en la sala ${cleanId}. Ahora mismo no hay nadie más dentro.`;
+  openRoom(cleanId,targetTab,msg);
+ }
+
+ function leaveGameCompletely(){
+  const savedRoom=roomId||code||lastRoom;
+  if(savedRoom){
+   setLastRoom(savedRoom);
+   try{localStorage.setItem('bingo-last-room',savedRoom);}catch{}
+  }
+  setRoomId('');
+  setRoom(null);
+  setPlayer(null);
+  setClaims([]);
+  setReview(null);
+  setRemoved(false);
+  setSettings(false);
+  setPickingCards(false);
   setInvitation('');
-  setCode('');
+  setCode(savedRoom||'');
   lastGame.current=null;
   try{
    localStorage.removeItem('bingo-room');
@@ -4332,7 +4545,8 @@ function SharedBingo({HostApp}){
  const seenKey=event?`${roomId}:${event.id}`:'';
  const ownMarks=player&&room&&player.round===room.round?player.marks:[];
  const showPlayerCard=(!admin&&player)||(admin&&adminTab==='card'&&player);
- const myCards=player?.card!=null?[player.card,...extraCards.filter(c=>c!==player.card&&c>=0&&c<CARDS.length)].slice(0,desiredCount):[];
+ const effectivePrimaryCard = player?.card != null ? player.card : localPrimaryCard;
+ const myCards=effectivePrimaryCard!=null?[effectivePrimaryCard,...extraCards.filter(c=>c!==effectivePrimaryCard&&c>=0&&c<CARDS.length)].slice(0,desiredCount):[];
 
  // Cargar y sincronizar selección de 1, 2 o 3 cartones y sus fichas por sala/usuario/ronda
  useEffect(()=>{
@@ -4342,6 +4556,7 @@ function SharedBingo({HostApp}){
    const saved=JSON.parse(localStorage.getItem(key)||'null');
    if(saved){
     if([1,2,3].includes(saved.desiredCount))setDesiredCount(saved.desiredCount);
+    if(Number.isInteger(saved.primaryCard)&&saved.primaryCard>=0&&saved.primaryCard<CARDS.length)setLocalPrimaryCard(saved.primaryCard);
     if(Array.isArray(saved.extraCards))setExtraCards(saved.extraCards.filter(c=>Number.isInteger(c)&&c>=0&&c<CARDS.length));
     if(room?.round&&saved.round===room.round&&saved.marksByCard&&typeof saved.marksByCard==='object'){
      setMarksByCard(saved.marksByCard);
@@ -4356,9 +4571,9 @@ function SharedBingo({HostApp}){
   if(!roomId||!user?.uid||!room?.round)return;
   const key=`bingo-multi-${roomId}-${user.uid}`;
   try{
-   localStorage.setItem(key,JSON.stringify({round:room.round,desiredCount,extraCards,marksByCard}));
+   localStorage.setItem(key,JSON.stringify({round:room.round,primaryCard:effectivePrimaryCard,desiredCount,extraCards,marksByCard}));
   }catch{}
- },[roomId,user?.uid,room?.round,desiredCount,extraCards,marksByCard]);
+ },[roomId,user?.uid,room?.round,effectivePrimaryCard,desiredCount,extraCards,marksByCard]);
 
  useEffect(()=>{
   if(player?.card!=null&&ownMarks.length>0){
@@ -4371,10 +4586,10 @@ function SharedBingo({HostApp}){
  },[player?.card,room?.round]);
 
  useEffect(()=>{
-  const isPlayingCard=Boolean(roomId&&room&&showPlayerCard&&player?.card!==null&&!pickingCards);
+  const isPlayingCard=Boolean(roomId&&room&&showPlayerCard&&effectivePrimaryCard!==null&&!pickingCards);
   document.body.classList.toggle('is-playing-shared-card',isPlayingCard);
   return()=>document.body.classList.remove('is-playing-shared-card');
- },[roomId,room,showPlayerCard,player?.card,pickingCards]);
+ },[roomId,room,showPlayerCard,effectivePrimaryCard,pickingCards]);
 
  function getCardMarks(cid){
   if(marksByCard[cid])return marksByCard[cid];
@@ -4382,13 +4597,17 @@ function SharedBingo({HostApp}){
   return [];
  }
 
- async function confirmMultiCards(chosenIds,targetCount=desiredCount){
-  const clean=[...new Set(chosenIds.filter(c=>Number.isInteger(c)&&c>=0&&c<CARDS.length))].slice(0,targetCount);
-  if(clean.length===0)throw Error('Elige al menos un cartón.');
+ function confirmMultiCards(chosenIds,targetCount=desiredCount){
+  audio.unlock();
+  audio.chime();
+  const clean=[...new Set((chosenIds||[]).filter(c=>Number.isInteger(c)&&c>=0&&c<CARDS.length))].slice(0,targetCount);
+  if(clean.length===0){
+   setError('Elige al menos un cartón.');
+   return;
+  }
   let primary=clean[0];
   let extras=clean.slice(1);
-  // Si el jugador ya tenía un cartón principal en una partida empezada y no es admin, mantenemos su cartón principal en Firestore para evitar bloqueo de reglas
-  if(player?.card!==null&&!admin&&room?.started&&primary!==player.card){
+  if(player?.card!==null&&player?.card!==undefined&&!admin&&room?.started&&primary!==player.card){
    if(clean.includes(player.card)){
     primary=player.card;
     extras=clean.filter(c=>c!==player.card);
@@ -4397,28 +4616,29 @@ function SharedBingo({HostApp}){
     extras=clean.slice(0,Math.max(0,targetCount-1));
    }
   }
-  if(player?.card===null|| (player.card!==primary && (admin || !room?.started || !(player.round===room.round&&player.locked)))){
-   try{
-    await net.pickCard(roomId,user.uid,primary);
-   }catch(err){
-    if(player?.card!==null){
-     primary=player.card;
-     extras=clean.filter(c=>c!==primary).slice(0,Math.max(0,targetCount-1));
-    }else throw err;
-   }
-  }
+  // Actualización instantánea (0ms) en pantalla para que ningún botón se atasque jamás
+  setLocalPrimaryCard(primary);
   setDesiredCount(targetCount);
   setExtraCards(extras);
+  setDraftCards(clean);
   setActiveCardIdx(0);
   setPickingCards(false);
+  setError('');
+
+  // Sincronización en segundo plano con Firestore sin bloquear la interfaz
+  if(roomId&&user?.uid&&(player?.card===null||player?.card===undefined||(player.card!==primary&&(admin||!room?.started||!(player.round===room.round&&player.locked))))){
+   net.pickCard(roomId,user.uid,primary).catch(()=>{});
+  }
  }
 
  function pickRandomCards(count=desiredCount){
+  audio.unlock();
+  audio.thud();
   const takenByOthers=new Set(seats.filter(s=>s.uid!==user?.uid).map(s=>s.id));
   const available=CARDS.map((_,id)=>id).filter(id=>!takenByOthers.has(id));
   const pool=available.length>=count?available:CARDS.map((_,id)=>id);
   const picked=[];
-  if(player?.card!==null&&pool.includes(player.card))picked.push(player.card);
+  if(player?.card!==null&&player?.card!==undefined&&pool.includes(player.card))picked.push(player.card);
   const rest=pool.filter(id=>!picked.includes(id));
   while(picked.length<count&&rest.length>0){
    const idx=Math.floor(Math.random()*rest.length);
@@ -4449,18 +4669,19 @@ function SharedBingo({HostApp}){
  }
 
  async function broadcast(){
-  audio.unlock();audio.setMusic(true);
+  audio.unlock();
   const ev={id:crypto.randomUUID(),type:'greeting'};
   setRoom(r=>({...r,event:ev}));setDismissed('');
   await net.setDoc(net.roomRef(roomId),{event:ev},{merge:true});
  }
 
  async function patchPlayer(patch){
+  if(!roomId||!user?.uid||!player||!room)return;
   await net.setDoc(net.playerRef(roomId,user.uid),{...(player.round!==room.round?{round:room.round,marks:[],locked:false}:{}),...patch,updatedAt:net.serverTimestamp()},{merge:true});
  }
 
  function markCard(cardId,n,e){
-  if(working||!online||!ready)return;
+  if(!online)return;
   const curMarks=getCardMarks(cardId);
   const marked=curMarks.includes(n),now=Date.now(),tapKey=`${cardId}:${n}`;
   if(marked||e.detail===0||now-(taps.current[tapKey]||0)<350){
@@ -4468,15 +4689,13 @@ function SharedBingo({HostApp}){
    const nextMarks=marked?curMarks.filter(x=>x!==n):[...curMarks,n].slice(0,15);
    setMarksByCard(prev=>({...prev,[cardId]:nextMarks}));
    audio.thud();
-   action(async()=>{
-    await patchPlayer({round:room.round,locked:true,marks:nextMarks});
-   });
+   if(room)patchPlayer({round:room.round,locked:true,marks:nextMarks}).catch(()=>{});
   }else taps.current[tapKey]=now;
  }
 
  async function claim(kind,preferredCardId){
   audio.unlock();
-  const cardsList=myCards.length?myCards:[player?.card??0];
+  const cardsList=myCards.length?myCards:[effectivePrimaryCard??0];
   let chosenCard=preferredCardId!=null&&cardsList.includes(preferredCardId)?preferredCardId:cardsList[0];
   if(preferredCardId==null&&cardsList.length>1){
    const dSet=new Set(room?.drawn||[]);
@@ -4519,9 +4738,16 @@ function SharedBingo({HostApp}){
  }
 
  async function logout(){
+  const savedRoom=roomId||code||lastRoom;
+  if(savedRoom){
+   setLastRoom(savedRoom);
+   try{localStorage.setItem('bingo-last-room',savedRoom);}catch{}
+  }
   setRoomId('');setRoom(null);lastGame.current=null;
+  try{localStorage.removeItem('bingo-room');}catch{}
   if(admin)await net.signOut(net.auth);
-  setIntro(1);
+  setSessionNotice('🔒 Has cerrado tu sesión de administrador.');
+  setIntro(3);
  }
 
  async function fullscreen(){
@@ -4540,60 +4766,93 @@ function SharedBingo({HostApp}){
   return()=>{window.removeEventListener('resize',update);window.visualViewport?.removeEventListener('resize',update)};
  },[]);
 
- if(intro===0)return React.createElement("div",{className:"snow-entry"},React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:40},(_,i)=>React.createElement("i",{key:i,style:{left:(i*43%100)+'%',width:4+i%5,height:4+i%5,animationDuration:(6+i%7)+'s',animationDelay:-i+'s'}}))),React.createElement("p",{className:"eyebrow"},"EL BINGO DE ELISABETH"),React.createElement("img",{className:"entry-tree-art",src:"./arbol-navidad.png",alt:"Árbol de Navidad artesanal con adornos rojos y luces doradas"}),React.createElement("h1",null,"Un poquito de magia…"),React.createElement("button",{className:"gold-button",onClick:()=>{audio.unlock();audio.setMusic(true);setIntro(1)}},"Seguir ",React.createElement("span",{"aria-hidden":"true"},"✦")),React.createElement(ManualButton,{role:"player"}),React.createElement("small",null,"V10"));
+ if(intro===0)return React.createElement("div",{className:"snow-entry"},React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:40},(_,i)=>React.createElement("i",{key:i,style:{left:(i*43%100)+'%',width:4+i%5,height:4+i%5,animationDuration:(6+i%7)+'s',animationDelay:-i+'s'}}))),React.createElement("p",{className:"eyebrow"},"EL BINGO DE ELISABETH"),React.createElement("img",{className:"entry-tree-art",src:"./arbol-navidad.png",alt:"Árbol de Navidad artesanal con adornos rojos y luces doradas"}),React.createElement("h1",null,"Un poquito de magia…"),React.createElement("button",{className:"gold-button",onClick:()=>{audio.unlock();setIntro(1)}},"Seguir ",React.createElement("span",{"aria-hidden":"true"},"✦")),React.createElement(ManualButton,{role:"player"}),React.createElement("small",null,"V11"));
 
- if(intro<3)return React.createElement("div",{className:"app welcome"},React.createElement("div",{className:"garland left"}),React.createElement("div",{className:"garland right"}),React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:24},(_,i)=>React.createElement("i",{key:i,style:{left:(i*43%100)+'%',width:3+i%4,height:3+i%4,animationDuration:(7+i%6)+'s',animationDelay:-i+'s'}}))),React.createElement(WelcomeCarousel,{onEnter:()=>{setMode('guest');setIntro(3)},onAdmin:()=>{setMode('admin');setIntro(3)}}),React.createElement("footer",null,"Creado por ",React.createElement("em",null,"Elisabeth"),React.createElement("small",null,"Comparte la alegría de la Navidad"),React.createElement("span",{className:"app-version"},"V10")));
+ if(intro<3)return React.createElement("div",{className:"app welcome"},React.createElement("div",{className:"garland left"}),React.createElement("div",{className:"garland right"}),React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:24},(_,i)=>React.createElement("i",{key:i,style:{left:(i*43%100)+'%',width:3+i%4,height:3+i%4,animationDuration:(7+i%6)+'s',animationDelay:-i+'s'}}))),React.createElement(WelcomeCarousel,{onEnter:()=>{setMode('guest');setError('');setIntro(3)},onAdmin:()=>{setMode('admin');setError('');setIntro(3)}}),React.createElement("footer",null,"Creado por ",React.createElement("em",null,"Elisabeth"),React.createElement("small",null,"Comparte la alegría de la Navidad"),React.createElement("span",{className:"app-version"},"V11")));
 
  if(user===undefined)return React.createElement("div",{className:"app shared-lobby"},React.createElement("p",null,"Preparando el bingo…"));
 
- if(mode==='admin'&&admin&&user.uid!==net.ADMIN_UID&&approval!=='approved')return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("div",{className:"lobby-nav-top"},React.createElement("button",{type:"button",className:"lobby-back-btn",onClick:()=>{setIntro(1);setError('')}},"← Volver a la portada")),React.createElement("h1",null,"Tu cuenta familiar"),React.createElement("p",null,user.email),React.createElement("p",null,approval==='pending'?'Tu solicitud está pendiente de aprobación por Elisabeth.':approval===null?'Comprobando tu acceso…':'Tu cuenta no tiene permiso para administrar partidas. Contacta con Elisabeth.'),approval==='missing'&&React.createElement("button",{className:"gold-button",onClick:()=>action(()=>net.setDoc(net.doc(net.db,'administrators',user.uid),{email:user.email,status:'pending',createdAt:net.serverTimestamp()}))},"Enviar solicitud"),error&&React.createElement("p",{role:"alert"},error),React.createElement("button",{className:"text-button",onClick:()=>action(logout)},"Cerrar sesión")));
+ if(mode==='admin'&&admin&&user.uid!==net.ADMIN_UID&&approval!=='approved')return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("div",{className:"lobby-nav-top"},React.createElement("button",{type:"button",className:"lobby-back-btn",onClick:()=>{setIntro(1);setError('')}},"← Volver a la portada")),React.createElement("h1",null,"Tu cuenta familiar"),React.createElement("p",null,user.email),React.createElement("p",null,approval==='pending'?'Tu solicitud está pendiente de aprobación por Elisabeth.':approval===null?'Comprobando tu acceso…':'Tu cuenta no tiene permiso para administrar partidas. Contacta con Elisabeth.'),approval==='missing'&&React.createElement("button",{className:"gold-button",onClick:()=>action(()=>net.setDoc(net.doc(net.db,'administrators',user.uid),{email:user.email,status:'pending',createdAt:net.serverTimestamp()}))},"Enviar solicitud"),error&&React.createElement("p",{role:"alert"},error),React.createElement("button",{className:"text-button",onClick:()=>action(logout)},"🔒 Cerrar sesión")));
 
- if(removed&&!admin&&roomId)return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("h1",null,"Tu participación ha terminado"),React.createElement("p",null,"La administración ha retirado tu inscripción y ha liberado tu cartón."),React.createElement("button",{className:"gold-button",onClick:leaveGameCompletely},"Volver al inicio")));
+ if(removed&&!admin&&roomId)return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("h1",null,"Tu participación ha terminado"),React.createElement("p",null,"La administración ha retirado tu inscripción y ha liberado tu cartón."),React.createElement("button",{className:"gold-button",onClick:closeSession},"🔒 Cerrar sesión"),React.createElement("button",{className:"text-button",onClick:leaveGameCompletely},"← Volver a la portada")));
 
- if(room?.archived)return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("h1",null,"Partida retirada"),React.createElement("p",null,"Esta partida ya no está activa."),React.createElement("button",{className:"gold-button",onClick:leaveGameCompletely},"Volver al inicio")));
+ if(room?.archived)return React.createElement("main",{className:"app shared-lobby"},React.createElement("section",{className:"shared-panel"},React.createElement("h1",null,"Partida retirada"),React.createElement("p",null,"Esta partida ya no está activa."),React.createElement("button",{className:"gold-button",onClick:closeSession},"🔒 Cerrar sesión"),React.createElement("button",{className:"text-button",onClick:leaveGameCompletely},"← Volver a la portada")));
 
  // PANTALLA DE ENTRADA (ESTRICTAMENTE SEPARADA: JUGADOR vs ADMINISTRADOR)
  if(!roomId){
   const isGuestView = Boolean(invitation || mode === 'guest');
   return (
-   React.createElement("div",{className:"app shared-lobby"},React.createElement("div",{className:'shared-panel '+(isGuestView?'player-entry-panel':'admin-entry-panel')},React.createElement("div",{className:"lobby-nav-top"},React.createElement("button",{type:"button",className:"lobby-back-btn",onClick:()=>{setIntro(1);setError('')},title:"Volver a la portada de bienvenida"},"← Volver a la portada"),React.createElement(ManualButton,{role:isGuestView?'player':'host',compact:true})),error&&React.createElement("p",{role:"alert",className:"shared-error"},error),isGuestView ? (
+   React.createElement("div",{className:"app shared-lobby"},React.createElement("div",{className:'shared-panel '+(isGuestView?'player-entry-panel':'admin-entry-panel')},React.createElement("div",{className:"lobby-nav-top"},React.createElement("button",{type:"button",className:"lobby-back-btn",onClick:()=>{setIntro(1);setError('');setSessionNotice('');},title:"Volver a la portada de bienvenida"},"← Volver a la portada"),React.createElement(ManualButton,{role:isGuestView?'player':'host',compact:true})),error&&React.createElement("p",{role:"alert",className:"shared-error"},error),sessionNotice&&(
+      React.createElement("div",{role:"status",className:"session-status-banner"},React.createElement("span",null,sessionNotice),emptyRoomPrompt&&(
+        React.createElement("button",{type:"button",className:"gold-button compact",disabled:working,onClick:()=>action(()=>reconnectSession(emptyRoomPrompt,isGuestView?'card':'bombo',true))},"Entrar igualmente a ",emptyRoomPrompt)
+       ),React.createElement("button",{type:"button",className:"text-button compact",onClick:()=>{setSessionNotice('');setEmptyRoomPrompt('');}},"×"))
+     ),isGuestView ? (
       /* ================= PANTALLA EXCLUSIVA DE ENTRAR A JUGAR (JUGADORES) ================= */
-      React.createElement("div",{className:"guest-entry-stage"},React.createElement("p",{className:"eyebrow"},"JUGAR CON MI CARTÓN"),React.createElement("h1",null,"Entrar a jugar"),React.createElement(LobbyPruna,null),React.createElement("form",{className:"clean-entry-form",onSubmit:e=>{
+      React.createElement("div",{className:"guest-entry-stage"},React.createElement("p",{className:"eyebrow"},"JUGAR CON MI CARTÓN"),React.createElement("h1",null,"Entrar a jugar"),React.createElement(LobbyPruna,null),lastRoom&&(
+        React.createElement("div",{className:"session-reconnect-box"},React.createElement("div",{className:"session-reconnect-info"},React.createElement("span",null,"🔄 Última sesión guardada:"),React.createElement("b",null,"Sala ",lastRoom," ",name?`· ${name}`:'')),React.createElement("div",{className:"session-reconnect-actions"},React.createElement("button",{type:"button",className:"gold-button green compact",disabled:working,onClick:()=>{
+            audio.unlock();
+            action(()=>reconnectSession(lastRoom,'card',false));
+           }},"🔄 Volver a entrar en ",lastRoom),React.createElement("button",{type:"button",className:"text-button compact",onClick:()=>{
+            setLastRoom('');
+            setCode('');
+            try{localStorage.removeItem('bingo-last-room');localStorage.removeItem('bingo-room');}catch{}
+            setSessionNotice('🗑️ Sesión anterior borrada. Puedes escribir otro código.');
+           }},"Olvidar sala")))
+       ),React.createElement("form",{className:"clean-entry-form",onSubmit:e=>{
         e.preventDefault();
         audio.unlock();
         action(async()=>{
          const id=(invitation||code).trim().toUpperCase();
          if(!id)throw Error('Escribe el código de la partida.');
+         const rSnap=await net.getDoc(net.roomRef(id));
+         if(!rSnap.exists()||rSnap.data()?.archived)throw Error('No existe una partida activa con ese código.');
+         const seatsSnap=await net.getDocs(net.collection(net.db,'rooms',id,'seats'));
          const playerName=(name||(user?.uid===net.ADMIN_UID?'Elisabeth':'Jugador')).trim();
          await net.joinRoom(id,playerName);
-         openRoom(id,'card');
+         const count=seatsSnap.size;
+         openRoom(
+          id,
+          'card',
+          count>0
+           ? `✅ Has entrado en la sala ${id}. Hay ${count} ${count===1?'cartón activo':'cartones activos'} dentro.`
+           : `ℹ️ Has entrado en la sala ${id}. Ahora mismo no hay nadie más con cartón dentro.`
+         );
         });
        }},React.createElement("label",null,React.createElement("span",null,"👤 Tu nombre"),React.createElement("input",{maxLength:30,required:true,placeholder:"Escribe tu nombre",value:name,onChange:e=>setName(e.target.value)})),React.createElement("label",null,React.createElement("span",null,"🔑 Código de la partida"),React.createElement("input",{required:true,placeholder:"Ej: AB12CD34",value:invitation||code,onChange:e=>{setInvitation('');setCode(e.target.value.toUpperCase())}})),React.createElement("button",{className:"gold-button",disabled:working||!(name.trim())||!((invitation||code).trim())},working?'Entrando…':'🎟 Elegir mi cartón y jugar')))
      ) : (
       /* ================= PANTALLA EXCLUSIVA DE ADMINISTRADOR ================= */
       admin ? (
-       React.createElement("div",{className:"admin-dashboard-stage"},React.createElement("p",{className:"eyebrow"},"PANEL DE CONTROL"),React.createElement("h1",null,user.uid===net.ADMIN_UID?'Administrador · Elisabeth':'Administrador'),React.createElement("div",{className:"admin-quick-actions-grid"},React.createElement("div",{className:"admin-action-box create-box"},React.createElement("span",{className:"action-box-icon"},"✨"),React.createElement("h3",null,"Nueva partida"),React.createElement("p",null,"Crea una sala nueva y abre el bombo al instante."),React.createElement("button",{type:"button",className:"gold-button",disabled:working,onClick:()=>action(async()=>openRoom(await net.createRoom(),'bombo'))},working?'Creando…':'Crear partida nueva')),React.createElement("div",{className:"admin-action-box join-box"},React.createElement("span",{className:"action-box-icon"},"🎱"),React.createElement("h3",null,"Partida empezada"),React.createElement("p",null,"Escribe el código o entra desde la lista de abajo."),React.createElement("input",{className:"admin-code-input",placeholder:"Código (ej: AB12CD34)",value:code,onChange:e=>setCode(e.target.value.toUpperCase())}),React.createElement("div",{className:"admin-join-buttons"},React.createElement("button",{type:"button",className:"gold-button green compact",disabled:working||!code.trim(),onClick:()=>action(async()=>{
+       React.createElement("div",{className:"admin-dashboard-stage"},React.createElement("p",{className:"eyebrow"},"PANEL DE CONTROL"),React.createElement("h1",null,user.uid===net.ADMIN_UID?'Administrador · Elisabeth':'Administrador'),lastRoom&&(
+         React.createElement("div",{className:"session-reconnect-box"},React.createElement("div",{className:"session-reconnect-info"},React.createElement("span",null,"🔄 Última sesión guardada:"),React.createElement("b",null,"Sala ",lastRoom)),React.createElement("div",{className:"session-reconnect-actions"},React.createElement("button",{type:"button",className:"gold-button green compact",disabled:working,onClick:()=>action(()=>reconnectSession(lastRoom,'bombo',false))},"🎱 Volver al bombo (",lastRoom,")"),React.createElement("button",{type:"button",className:"gold-button compact",disabled:working,onClick:()=>action(()=>reconnectSession(lastRoom,'card',false))},"🎟 Volver a mi cartón (",lastRoom,")")))
+        ),React.createElement("div",{className:"admin-quick-actions-grid"},React.createElement("div",{className:"admin-action-box create-box"},React.createElement("span",{className:"action-box-icon"},"✨"),React.createElement("h3",null,"Nueva partida"),React.createElement("p",null,"Crea una sala nueva y abre el bombo al instante."),React.createElement("button",{type:"button",className:"gold-button",disabled:working,onClick:()=>action(async()=>openRoom(await net.createRoom(),'bombo','✨ Partida nueva creada. Comparte el código para que entren los jugadores.'))},working?'Creando…':'Crear partida nueva')),React.createElement("div",{className:"admin-action-box join-box"},React.createElement("span",{className:"action-box-icon"},"🎱"),React.createElement("h3",null,"Partida empezada"),React.createElement("p",null,"Escribe el código o entra desde la lista de abajo."),React.createElement("input",{className:"admin-code-input",placeholder:"Código (ej: AB12CD34)",value:code,onChange:e=>setCode(e.target.value.toUpperCase())}),React.createElement("div",{className:"admin-join-buttons"},React.createElement("button",{type:"button",className:"gold-button green compact",disabled:working||!code.trim(),onClick:()=>action(async()=>{
              const id=code.trim().toUpperCase();
              const r=await net.getDoc(net.roomRef(id));
              if(!r.exists())throw Error('No existe una partida con ese código.');
-             openRoom(id,'bombo');
+             const pSnap=await net.getDocs(net.collection(net.db,'rooms',id,'players'));
+             openRoom(
+              id,
+              'bombo',
+              pSnap.size>0
+               ? `✅ Has entrado en la sala ${id}. Hay ${pSnap.size} ${pSnap.size===1?'participante':'participantes'} dentro.`
+               : `ℹ️ Has entrado en la sala ${id}. Ahora mismo no hay nadie dentro.`
+             );
             })},"🎱 Ir al bombo"),React.createElement("button",{type:"button",className:"gold-button compact",disabled:working||!code.trim(),onClick:()=>action(async()=>{
              const id=code.trim().toUpperCase();
              const playerName=(user.uid===net.ADMIN_UID?'Elisabeth':(firstName||'Admin')).trim();
              await net.joinRoom(id,playerName);
-             openRoom(id,'card');
+             openRoom(id,'card',`✅ Has entrado con tu cartón en la sala ${id}.`);
             })},"🎟 Ir a cartón")))),user?.uid===net.ADMIN_UID&&(
          React.createElement(AdminAccounts,{onEnterRoom:(id,tab)=>{
           if(tab==='card'){
            action(async()=>{
             await net.joinRoom(id,'Elisabeth');
-            openRoom(id,'card');
+            openRoom(id,'card',`✅ Has entrado con tu cartón en la sala ${id}.`);
            });
           }else{
-           openRoom(id,'bombo');
+           openRoom(id,'bombo',`✅ Has abierto el bombo de la sala ${id}.`);
           }
          }})
-        ),React.createElement("div",{className:"lobby-actions-footer"},React.createElement("button",{type:"button",className:"text-button",onClick:()=>action(logout)},"Cerrar sesión (",user.email,")")))
+        ),React.createElement("div",{className:"lobby-actions-footer"},React.createElement("button",{type:"button",className:"gold-button compact",onClick:()=>action(logout)},"🔒 Cerrar sesión de administrador (",user.email,")")))
       ) : (
        React.createElement("div",{className:"admin-login-stage"},React.createElement("p",{className:"eyebrow"},"ACCESO DE ADMINISTRADOR"),React.createElement("h1",null,"Administrador"),React.createElement("div",{className:"lobby-snowglobe-wrap"},React.createElement(SnowGlobe,{className:"lobby-snowglobe"}),React.createElement("p",{className:"lobby-feature-hint"},"✦ 1 toque: luz · 2: mucha luz · 3: cobra vida ✦")),React.createElement("form",{className:"clean-entry-form",onSubmit:e=>{
          e.preventDefault();
@@ -4606,7 +4865,7 @@ function SharedBingo({HostApp}){
           React.createElement(React.Fragment,null,React.createElement("label",null,"Nombre",React.createElement("input",{required:true,maxLength:60,autoComplete:"given-name",value:firstName,onChange:e=>setFirstName(e.target.value)})),React.createElement("label",null,"Apellidos",React.createElement("input",{required:true,maxLength:100,autoComplete:"family-name",value:lastName,onChange:e=>setLastName(e.target.value)})))
          ),React.createElement("label",null,"Correo electrónico",React.createElement("input",{type:"email",autoComplete:"username",required:true,value:email,onChange:e=>setEmail(e.target.value)})),React.createElement("label",null,"Contraseña",React.createElement("input",{type:"password",autoComplete:"current-password",required:true,value:password,onChange:e=>setPassword(e.target.value)})),React.createElement("button",{className:"gold-button",disabled:working},working?'Entrando…':register?'Solicitar cuenta':'Entrar a Administrador'),React.createElement("button",{className:"text-button",type:"button",disabled:!email.trim()||working,onClick:()=>action(async()=>{await net.sendPasswordResetEmail(net.auth,email.trim());setError('Si el correo corresponde a una cuenta, recibirás las instrucciones para recuperar la contraseña.')})},"He olvidado mi contraseña")))
       )
-     ),React.createElement("small",{className:"panel-version-foot"},"Creado por Elisabeth · V10")))
+     ),React.createElement("small",{className:"panel-version-foot"},"Creado por Elisabeth · V11")))
   );
  }
 
@@ -4617,7 +4876,7 @@ function SharedBingo({HostApp}){
  const reviewDecoded = review ? decodeClaimRequestId(review.requestId, review.card, reviewFallbackMarks) : null;
 
  return (
-  React.createElement(React.Fragment,null,React.createElement("div",{className:"shared-status-bar"},React.createElement("div",{className:"status-top-info"},React.createElement("div",{className:"status-room-pill"},React.createElement("span",{className:"room-sub"},"PARTIDA"),React.createElement("b",{className:"room-code-tag"},roomId)),React.createElement("div",{className:"status-conn-pill "+(online?(ready?'is-online':'is-connecting'):'is-offline')},React.createElement("span",{className:"conn-dot"},"●"),React.createElement("span",null,!online?'Sin conexión':ready?'Conectada':'Conectando…'))),React.createElement("div",{className:"status-actions-row"},user?.uid===net.ADMIN_UID&&(
+  React.createElement(React.Fragment,null,React.createElement("div",{className:"shared-status-bar"},React.createElement("div",{className:"status-top-info"},React.createElement("div",{className:"status-room-pill"},React.createElement("span",{className:"room-sub"},"PARTIDA"),React.createElement("b",{className:"room-code-tag"},roomId)),React.createElement("div",{className:"status-conn-pill "+(online?(ready?'is-online':'is-connecting'):'is-offline')},React.createElement("span",{className:"conn-dot"},"●"),React.createElement("span",null,!online?'Sin conexión':ready?`Conectada · ${admin?players.length:seats.length} dentro`:'Conectando…'))),React.createElement("div",{className:"status-actions-row"},user?.uid===net.ADMIN_UID&&(
       React.createElement("button",{className:"status-gold-btn admin-btn",onClick:()=>setAccounts(!accounts)},React.createElement("span",null,"👑")," Configuración")
      ),admin&&(
       React.createElement(React.Fragment,null,React.createElement("button",{className:"status-gold-btn",onClick:()=>setShowRoster(x=>!x)},React.createElement("span",null,"👥")," Jugadores (",players.length,")"),React.createElement("button",{className:"status-gold-btn copy-btn "+(copiedURL?'active-copied':''),onClick:()=>action(async()=>{await navigator.clipboard.writeText(shareURL.href);setCopiedURL(shareURL.href);setTimeout(()=>setCopiedURL(''),10000);})},React.createElement("span",null,copiedURL?'✓':'🔗')," ",copiedURL?'¡Copiado!':'Invitación'),player?(
@@ -4625,7 +4884,9 @@ function SharedBingo({HostApp}){
        ):(
         React.createElement("button",{className:"status-gold-btn play-toggle-btn",onClick:()=>action(async()=>{const n=(user.uid===net.ADMIN_UID?'Elisabeth':(firstName||'Administrador')).trim();await net.joinRoom(roomId,n);setAdminTab('card');})},React.createElement("span",null,"🎟")," Jugar con cartón")
        ))
-     ),React.createElement("button",{className:"status-gold-btn exit-btn",onClick:leaveGameCompletely,disabled:working},React.createElement("span",null,"🚪")," Salir de la partida"))),copiedURL&&(
+     ),React.createElement("button",{className:"status-gold-btn exit-btn",onClick:closeSession,title:"Cerrar tu sesión actual (guarda la sala para volver a entrar)"},React.createElement("span",null,"🔒")," Cerrar sesión"),React.createElement("button",{className:"status-gold-btn exit-btn",onClick:leaveGameCompletely,title:"Salir a la portada de inicio"},React.createElement("span",null,"🚪")," Inicio"))),sessionNotice&&(
+    React.createElement("div",{role:"status",className:"session-status-banner in-room-banner"},React.createElement("span",null,sessionNotice),React.createElement("button",{type:"button",className:"text-button compact",onClick:()=>setSessionNotice('')},"×"))
+   ),copiedURL&&(
     React.createElement("div",{className:"copied-invite-card",role:"status"},React.createElement("div",{className:"copied-card-header"},React.createElement("span",{className:"copied-badge-check"},"✓"),React.createElement("strong",null,"¡Invitación copiada!"),React.createElement("button",{className:"text-button compact",onClick:()=>setCopiedURL('')},"Cerrar ×")),React.createElement("div",{className:"copied-url-display"},React.createElement("code",null,copiedURL)))
    ),accounts&&user?.uid===net.ADMIN_UID&&(
     React.createElement(AdminAccounts,{onClose:()=>setAccounts(false),onEnterRoom:(id,tab)=>{
@@ -4636,41 +4897,45 @@ function SharedBingo({HostApp}){
        openRoom(id,'bombo');
       }
      }})
-   ),error&&React.createElement("div",{role:"alert",className:"shared-error"},error,React.createElement("button",{onClick:()=>setError('')},"×")),(!room||!ready)&&React.createElement("p",{className:"shared-wait"},"Conectando con la partida…"),room&&admin&&adminTab==='bombo'&&(
-    React.createElement(React.Fragment,null,React.createElement(HostApp,{key:roomId+'-'+hostKey,initialGame:lastGame.current||room,sharedBlocked:working||paused||!online||!ready,onGameChange:syncGame,onReset:()=>syncGame({drawn:[],pending:null},true),skipIntro:true,onParticipants:()=>setShowRoster(true),onAdministration:user.uid===net.ADMIN_UID?()=>setAccounts(true):undefined,onBroadcast:()=>action(broadcast),onLeaveGame:leaveGameCompletely}),paused&&(
+   ),showRoster&&admin&&(
+    React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:"modal shared-roster",role:"dialog","aria-modal":"true","aria-label":"Participantes"},React.createElement("button",{className:"text-button",onClick:()=>setShowRoster(false)},"Cerrar ×"),React.createElement("h2",null,"👥 Control de jugadores en la sala (",players.length,")"),React.createElement("p",{className:"roster-sub"},"Como administrador puedes ver quién está dentro y cerrar la sesión de cualquier participante si hace falta."),remove&&(
+       React.createElement("div",{className:"remove-confirm",role:"alert"},React.createElement("h3",null,"¿Sacar de la sesión a ",remove.name,"?"),React.createElement("p",null,"Se cerrará su sesión en esta sala y se liberará su cartón y sus fichas."),React.createElement("button",{className:"gold-button",disabled:working,onClick:()=>action(async()=>{await net.removePlayer(roomId,remove.uid);setRemove(null)})},"Sí, sacar de la sala"),React.createElement("button",{className:"text-button",disabled:working,onClick:()=>setRemove(null)},"Cancelar"))
+      ),players.length===0?React.createElement("p",null,"ℹ️ Ahora mismo no hay ningún jugador dentro de la sala."):players.map(p=>(
+       React.createElement("div",{key:p.uid,className:"roster-player-row"},React.createElement("div",null,React.createElement("b",null,p.name)," · ",p.card===null?'Eligiendo cartón':'Cartón N.º '+(p.card+1),React.createElement("small",null,"Marcados: ",p.marks?.length||0,"/15")),React.createElement("button",{className:"gold-button compact",disabled:working,onClick:()=>setRemove(p)},"Sacar / Borrar"))
+      ))))
+   ),error&&React.createElement("div",{role:"alert",className:"shared-error"},error,React.createElement("button",{onClick:()=>setError('')},"×")),!room&&React.createElement("p",{className:"shared-wait"},"Conectando con la partida…"),room&&admin&&adminTab==='bombo'&&(
+    React.createElement(React.Fragment,null,React.createElement(HostApp,{key:roomId+'-'+hostKey,initialGame:lastGame.current||room,sharedBlocked:working||paused||!online,onGameChange:syncGame,onReset:()=>syncGame({drawn:[],pending:null},true),skipIntro:true,onParticipants:()=>setShowRoster(true),onAdministration:user.uid===net.ADMIN_UID?()=>setAccounts(true):undefined,onBroadcast:()=>action(broadcast),onLeaveGame:closeSession}),paused&&(
       React.createElement("aside",{className:"shared-paused"},React.createElement("span",null,"🔔 ¡Sorteo en pausa! ",React.createElement("b",null,activeClaims[0]?.name||'Un jugador')," ha cantado ",React.createElement("b",null,activeClaims[0]?.kind==='line'?'LÍNEA':'BINGO'),"."),React.createElement("button",{className:"gold-button green compact",onClick:()=>setReview(activeClaims[0]||null)},"🔍 Comprobar cartón"))
-     ),showRoster&&(
-      React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:"modal shared-roster",role:"dialog","aria-modal":"true","aria-label":"Participantes"},React.createElement("button",{className:"text-button",onClick:()=>setShowRoster(false)},"Cerrar ×"),React.createElement("h2",null,"Jugadores en la sala (",players.length,")"),remove&&(
-         React.createElement("div",{className:"remove-confirm",role:"alert"},React.createElement("h3",null,"¿Borrar a ",remove.name,"?"),React.createElement("p",null,"Se liberará su cartón y sus fichas."),React.createElement("button",{className:"gold-button",disabled:working,onClick:()=>action(async()=>{await net.removePlayer(roomId,remove.uid);setRemove(null)})},"Sí, borrar"),React.createElement("button",{className:"text-button",disabled:working,onClick:()=>setRemove(null)},"Cancelar"))
-        ),players.length===0?React.createElement("p",null,"Todavía no se ha unido nadie."):players.map(p=>(
-         React.createElement("div",{key:p.uid,className:"roster-player-row"},React.createElement("div",null,React.createElement("b",null,p.name)," · ",p.card===null?'Sin cartón':'Cartón N.º '+(p.card+1),React.createElement("small",null,"Marcados: ",p.marks?.length||0,"/15")),React.createElement("button",{className:"text-button",disabled:working,onClick:()=>setRemove(p)},"Borrar"))
-        ))))
      ))
    ),room&&showPlayerCard&&(
-    React.createElement("main",{className:'app playing-card shared-player '+(myCards.length>1&&viewAllCards?'multi-cards-active':'')},React.createElement("div",{className:"card-play"},React.createElement("div",{className:"card-toolbar"},React.createElement("b",null,"🎟 ",player.name," · Sala ",roomId," (",myCards.length||desiredCount," ",(myCards.length||desiredCount)===1?'cartón':'cartones',")"),React.createElement("div",{className:"card-toolbar-btns"},admin&&React.createElement("button",{className:"gold-button green compact",onClick:()=>setAdminTab('bombo')},"🎱 Ir al bombo"),React.createElement("button",{className:"gold-button compact",onClick:()=>{setDraftCards(myCards);setPickingCards(p=>!p);}},"🎟 ",pickingCards?'Ver mis cartones':`Elegir 1, 2 o 3 cartones`),React.createElement("button",{className:"gold-button compact",onClick:()=>setSettings(!settings)},"🎨 Color y fichas"),React.createElement(ManualButton,{role:"player",compact:true}),React.createElement("button",{className:"gold-button compact",onClick:leaveGameCompletely},"🚪 Salir de la partida"))),(player.card===null || pickingCards) ? (
+    React.createElement("main",{className:'app playing-card shared-player '+(myCards.length>1&&viewAllCards?'multi-cards-active':'')},React.createElement("div",{className:"card-play"},React.createElement("div",{className:"card-toolbar"},React.createElement("b",null,"🎟 ",player.name," · Sala ",roomId," (",myCards.length||desiredCount," ",(myCards.length||desiredCount)===1?'cartón':'cartones',")"),React.createElement("div",{className:"card-toolbar-btns"},admin&&React.createElement("button",{className:"gold-button green compact",onClick:()=>setAdminTab('bombo')},"🎱 Ir al bombo"),admin&&React.createElement("button",{className:"gold-button compact",onClick:()=>setShowRoster(true)},"👥 Jugadores (",players.length,")"),React.createElement("button",{className:"gold-button compact",onClick:()=>{audio.thud();setDraftCards(myCards);setPickingCards(p=>!p);}},"🎟 ",pickingCards?'Ver mis cartones':`Elegir 1, 2 o 3 cartones`),React.createElement("button",{className:"gold-button compact",onClick:()=>{audio.thud();setSettings(!settings);}},"🎨 Color y fichas"),React.createElement(ManualButton,{role:"player",compact:true}),React.createElement("button",{className:"gold-button compact",onClick:closeSession},"🔒 Cerrar sesión"))),(effectivePrimaryCard===null || pickingCards) ? (
        React.createElement("section",{className:"shared-catalog"},React.createElement("div",{className:"catalog-multi-header"},React.createElement("h2",null,"¿Con cuántos cartones quieres jugar?"),React.createElement("p",{className:"catalog-multi-sub"},"Cada jugador y el administrador podéis escoger jugar con ",React.createElement("b",null,"1, 2 o 3 cartones"),"."),React.createElement("div",{className:"card-count-selector",role:"group","aria-label":"Cantidad de cartones"},[1,2,3].map(n=>(
            React.createElement("button",{key:n,type:"button",className:'count-pill-btn '+(desiredCount===n?'active':''),onClick:()=>{
+             audio.thud();
              setDesiredCount(n);
              setDraftCards(prev=>{
               const base=prev.length?prev:myCards;
               return base.slice(0,n);
              });
             }},React.createElement("span",{className:"count-icons"},'🎟'.repeat(n)),React.createElement("b",null,"Jugar con ",n," ",n===1?'cartón':'cartones'))
-          ))),React.createElement("div",{className:"catalog-selection-bar"},React.createElement("div",{className:"catalog-selection-status"},React.createElement("span",null,"Seleccionados (",draftCards.length,"/",desiredCount,"): "),React.createElement("b",null,draftCards.length?draftCards.map(id=>'N.º '+(id+1)).join(', '):'Elige abajo o pulsa «Elegir al azar»')),React.createElement("div",{className:"catalog-selection-actions"},React.createElement("button",{type:"button",className:"gold-button compact",disabled:working||!ready||!online,onClick:()=>action(async()=>{
+          ))),React.createElement("div",{className:"catalog-selection-bar"},React.createElement("div",{className:"catalog-selection-status"},React.createElement("span",null,"Seleccionados (",draftCards.length,"/",desiredCount,"): "),React.createElement("b",null,draftCards.length?draftCards.map(id=>'N.º '+(id+1)).join(', '):'Elige abajo o pulsa «Elegir al azar y jugar»')),React.createElement("div",{className:"catalog-selection-actions"},React.createElement("button",{type:"button",className:"gold-button compact",onClick:()=>{
              const randomIds=pickRandomCards(desiredCount);
-             await confirmMultiCards(randomIds,desiredCount);
-            })},"🎲 Elegir ",desiredCount," al azar y jugar"),draftCards.length>0&&(
-            React.createElement("button",{type:"button",className:"gold-button green compact",disabled:working||!ready||!online,onClick:()=>action(()=>confirmMultiCards(draftCards,Math.max(1,draftCards.length)))},"✅ Jugar con ",draftCards.length===1?'este cartón':`estos ${draftCards.length} cartones`," (",draftCards.map(id=>'#'+(id+1)).join(', '),")")
-           ),pickingCards&&player.card!==null&&(
+             confirmMultiCards(randomIds,desiredCount);
+            }},"🎲 Elegir ",desiredCount," al azar y jugar"),React.createElement("button",{type:"button",className:"gold-button compact",onClick:()=>{
+             pickRandomCards(desiredCount);
+            }},"🔀 Sortear ",desiredCount," al azar"),draftCards.length>0&&(
+            React.createElement("button",{type:"button",className:"gold-button green compact",onClick:()=>confirmMultiCards(draftCards,Math.max(1,draftCards.length))},"✅ Aceptar y jugar con ",draftCards.length===1?'este cartón':`estos ${draftCards.length} cartones`," (",draftCards.map(id=>'#'+(id+1)).join(', '),")")
+           ),pickingCards&&effectivePrimaryCard!==null&&(
             React.createElement("button",{type:"button",className:"text-button",onClick:()=>setPickingCards(false)},"← Volver a mis cartones")
            )))),CARDS.map((c,id)=>{
          const takenByOther=seats.some(s=>s.id===id&&s.uid!==user.uid);
          const isSelected=draftCards.includes(id);
          const selIndex=draftCards.indexOf(id);
          return (
-          React.createElement("article",{key:id,className:isSelected?'catalog-card-selected':''},React.createElement(Card,{id:id,color:player.color,chip:player.chip}),React.createElement("div",{className:"catalog-card-actions"},React.createElement("button",{className:'gold-button '+(isSelected?'green':''),disabled:working||!ready||!online||takenByOther,onClick:()=>{
+          React.createElement("article",{key:id,className:isSelected?'catalog-card-selected':''},React.createElement(Card,{id:id,color:player.color,chip:player.chip}),React.createElement("div",{className:"catalog-card-actions"},React.createElement("button",{type:"button",className:'gold-button '+(isSelected?'green':''),disabled:takenByOther,onClick:()=>{
+              audio.thud();
               if(desiredCount===1&&!pickingCards){
-               action(()=>confirmMultiCards([id],1));
+               confirmMultiCards([id],1);
                return;
               }
               setDraftCards(prev=>{
@@ -4685,31 +4950,35 @@ function SharedBingo({HostApp}){
               : desiredCount===1&&!pickingCards
               ? `Elegir cartón N.º ${id+1} y jugar`
               : `Seleccionar cartón N.º ${id+1}`),isSelected&&draftCards.length===desiredCount&&(
-             React.createElement("button",{type:"button",className:"gold-button",disabled:working||!ready||!online,onClick:()=>action(()=>confirmMultiCards(draftCards,desiredCount))},"🚀 ¡Empezar a jugar con ",desiredCount===1?'mi cartón':`mis ${desiredCount} cartones`,"!")
+             React.createElement("button",{type:"button",className:"gold-button",onClick:()=>confirmMultiCards(draftCards,desiredCount)},"🚀 ¡Empezar a jugar con ",desiredCount===1?'mi cartón':`mis ${desiredCount} cartones`,"!")
             )))
          );
         }))
       ) : (
        React.createElement(React.Fragment,null,React.createElement("div",{className:"multi-cards-bar"},React.createElement("div",{className:"multi-cards-tabs"},myCards.length>1&&(
-           React.createElement("button",{type:"button",className:'multi-tab-btn '+(viewAllCards?'active':''),onClick:()=>setViewAllCards(true)},"👁 Ver los ",myCards.length," a la vez")
+           React.createElement("button",{type:"button",className:'multi-tab-btn '+(viewAllCards?'active':''),onClick:()=>{audio.thud();setViewAllCards(true);}},"👁 Ver los ",myCards.length," a la vez")
           ),myCards.map((cid,idx)=>(
-           React.createElement("button",{key:cid,type:"button",className:'multi-tab-btn '+((!viewAllCards||myCards.length===1)&&activeCardIdx===idx?'active':''),onClick:()=>{setActiveCardIdx(idx);setViewAllCards(false);}},"🎟 Cartón N.º ",cid+1," ",React.createElement("small",null,"(",getCardMarks(cid).length,"/15)"))
-          ))),React.createElement("button",{type:"button",className:"multi-add-btn",onClick:()=>{setDraftCards(myCards);setPickingCards(true);}},"➕ Jugar con 1, 2 o 3 cartones")),React.createElement("div",{className:'cards-stage-grid '+(myCards.length>1&&viewAllCards?'show-all-'+myCards.length:'single-focus')},myCards.map((cid,idx)=>{
+           React.createElement("button",{key:cid,type:"button",className:'multi-tab-btn '+((!viewAllCards||myCards.length===1)&&activeCardIdx===idx?'active':''),onClick:()=>{audio.thud();setActiveCardIdx(idx);setViewAllCards(false);}},"🎟 Cartón N.º ",cid+1," ",React.createElement("small",null,"(",getCardMarks(cid).length,"/15)"))
+          ))),React.createElement("button",{type:"button",className:"multi-add-btn",onClick:()=>{audio.thud();setDraftCards(myCards);setPickingCards(true);}},"➕ Jugar con 1, 2 o 3 cartones")),React.createElement("div",{className:'cards-stage-grid '+(myCards.length>1&&viewAllCards?'show-all-'+myCards.length:'single-focus')},myCards.map((cid,idx)=>{
           const isFocused = idx === (activeCardIdx < myCards.length ? activeCardIdx : 0);
           if(!viewAllCards && myCards.length>1 && !isFocused) return null;
           const cMarks=getCardMarks(cid);
           return (
            React.createElement("div",{className:'card-unit '+(isFocused?'is-landscape-active':'is-landscape-hidden'),key:cid},React.createElement(Card,{id:cid,marks:cMarks,onMark:(n,e)=>markCard(cid,n,e),color:player.color,chip:player.chip},myCards.length>1&&myCards.map((switchCid,sIdx)=>(
-              React.createElement("button",{key:switchCid,type:"button",className:'landscape-mini-btn card-switch-mini '+(sIdx===idx?'active-card-pill':''),onClick:()=>setActiveCardIdx(sIdx),title:`Ver Cartón N.º ${switchCid+1}`},"🎟 #",switchCid+1," (",getCardMarks(switchCid).length,")")
-             )),React.createElement("button",{type:"button",className:"landscape-mini-btn line-mini",disabled:working||!online||!ready,onClick:()=>action(()=>claim('line',cid))},"¡LÍNEA!"),React.createElement("button",{type:"button",className:"landscape-mini-btn bingo-mini",disabled:working||!online||!ready,onClick:()=>action(()=>claim('bingo',cid))},"¡BINGO!"),React.createElement("button",{type:"button",className:"landscape-mini-btn gear-mini",onClick:()=>setSettings(!settings),title:"Color y fichas"},"🎨"),React.createElement("button",{type:"button",className:"landscape-mini-btn exit-mini",onClick:leaveGameCompletely,title:"Salir de la partida"},"🚪")))
+              React.createElement("button",{key:switchCid,type:"button",className:'landscape-mini-btn card-switch-mini '+(sIdx===idx?'active-card-pill':''),onClick:()=>{audio.thud();setActiveCardIdx(sIdx);},title:`Ver Cartón N.º ${switchCid+1}`},"🎟 #",switchCid+1," (",getCardMarks(switchCid).length,")")
+             )),React.createElement("button",{type:"button",className:"landscape-mini-btn line-mini",disabled:working||!online,onClick:()=>action(()=>claim('line',cid))},"¡LÍNEA!"),React.createElement("button",{type:"button",className:"landscape-mini-btn bingo-mini",disabled:working||!online,onClick:()=>action(()=>claim('bingo',cid))},"¡BINGO!"),React.createElement("button",{type:"button",className:"landscape-mini-btn gear-mini",onClick:()=>{audio.thud();setSettings(!settings);},title:"Color y fichas"},"🎨"),React.createElement("button",{type:"button",className:"landscape-mini-btn exit-mini",onClick:closeSession,title:"Cerrar sesión"},"🔒")))
           );
-         })),React.createElement("div",{className:"shared-claim-buttons"},React.createElement("button",{type:"button",className:"gold-button claim-line-btn",disabled:working||!online||!ready,onClick:()=>action(()=>claim('line',myCards[activeCardIdx]))},"📣 ¡LÍNEA!"),React.createElement("button",{type:"button",className:"gold-button green claim-bingo-btn",disabled:working||!online||!ready,onClick:()=>action(()=>claim('bingo',myCards[activeCardIdx]))},"🏆 ¡BINGO!")),React.createElement("div",{className:"player-bottom-bar"},React.createElement("p",{className:"shared-hint"},"Dos toques para marcar · Un toque para quitar · Jugando con ",React.createElement("b",null,myCards.length," ",myCards.length===1?'cartón':'cartones')," (",myCards.map(c=>`#${c+1}: ${getCardMarks(c).length}/15`).join(' · '),") · Gira el móvil en horizontal para ver el cartón en grande"),React.createElement("button",{type:"button",className:"text-button player-leave-link",onClick:leaveGameCompletely},"🚪 Salir de la partida y volver al inicio")))
+         })),React.createElement("div",{className:"shared-claim-buttons"},React.createElement("button",{type:"button",className:"gold-button claim-line-btn",disabled:working||!online,onClick:()=>action(()=>claim('line',myCards[activeCardIdx]))},"📣 ¡LÍNEA!"),React.createElement("button",{type:"button",className:"gold-button green claim-bingo-btn",disabled:working||!online,onClick:()=>action(()=>claim('bingo',myCards[activeCardIdx]))},"🏆 ¡BINGO!")),React.createElement("div",{className:"player-bottom-bar"},React.createElement("p",{className:"shared-hint"},"Dos toques para marcar · Un toque para quitar · Jugando con ",React.createElement("b",null,myCards.length," ",myCards.length===1?'cartón':'cartones')," (",myCards.map(c=>`#${c+1}: ${getCardMarks(c).length}/15`).join(' · '),") · Gira el móvil en horizontal para ver el cartón en grande"),React.createElement("div",{className:"player-bottom-actions"},React.createElement("button",{type:"button",className:"text-button player-leave-link",onClick:closeSession},"🔒 Cerrar sesión (guardar sala ",roomId,")"),React.createElement("button",{type:"button",className:"text-button player-leave-link",onClick:leaveGameCompletely},"🚪 Volver a la portada"))))
       ),settings&&(
-       React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:"modal",role:"dialog","aria-modal":"true","aria-label":"Mi cartón"},React.createElement("button",{className:"text-button",onClick:()=>setSettings(false)},"Cerrar ×"),React.createElement("h2",null,"Personaliza tus cartones"),React.createElement("div",{className:"shared-colors"},COLORS.map(c=>React.createElement("button",{key:c,"aria-label":'Color '+c,"aria-pressed":player.color===c,style:{background:c},disabled:working,onClick:()=>action(()=>patchPlayer({color:c}))}))),React.createElement("label",null,"Color a medida ",React.createElement("input",{type:"color",value:player.color,onChange:e=>action(()=>patchPlayer({color:e.target.value}))})),React.createElement("h3",null,"Color de las fichas"),React.createElement("div",{className:"chip-options"},React.createElement("button",{className:"text-button","aria-pressed":player.chip==='auto',onClick:()=>action(()=>patchPlayer({chip:'auto'}))},"A juego con el cartón"),React.createElement("button",{className:"text-button","aria-pressed":player.chip==='transparent',onClick:()=>action(()=>patchPlayer({chip:'transparent'}))},"Transparentes")),React.createElement("label",null,"Otro color de ficha ",React.createElement("input",{type:"color",value:player.chip.startsWith('#')?player.chip:player.color,onChange:e=>action(()=>patchPlayer({chip:e.target.value}))})),React.createElement("h3",null,"Cantidad de cartones (1, 2 o 3)"),React.createElement("p",null,"Actualmente juegas con ",React.createElement("b",null,myCards.length," ",myCards.length===1?'cartón':'cartones')," (",myCards.map(id=>'N.º '+(id+1)).join(', '),")."),React.createElement("button",{type:"button",className:"gold-button green compact",onClick:()=>{
+       React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:"modal",role:"dialog","aria-modal":"true","aria-label":"Mi cartón"},React.createElement("button",{className:"text-button",onClick:()=>setSettings(false)},"Cerrar ×"),React.createElement("h2",null,"Personaliza tus cartones"),React.createElement("div",{className:"shared-colors"},COLORS.map(c=>React.createElement("button",{key:c,type:"button","aria-label":'Color '+c,"aria-pressed":player.color===c,style:{background:c},onClick:()=>{audio.thud();setPlayer(p=>p?{...p,color:c}:p);patchPlayer({color:c}).catch(()=>{});}}))),React.createElement("label",null,"Color a medida ",React.createElement("input",{type:"color",value:player.color||'#8d1b2b',onChange:e=>{const val=e.target.value;setPlayer(p=>p?{...p,color:val}:p);patchPlayer({color:val}).catch(()=>{});}})),React.createElement("h3",null,"Color de las fichas"),React.createElement("div",{className:"chip-options"},React.createElement("button",{type:"button",className:"text-button","aria-pressed":player.chip==='auto',onClick:()=>{audio.thud();setPlayer(p=>p?{...p,chip:'auto'}:p);patchPlayer({chip:'auto'}).catch(()=>{});}},"A juego con el cartón"),React.createElement("button",{type:"button",className:"text-button","aria-pressed":player.chip==='transparent',onClick:()=>{audio.thud();setPlayer(p=>p?{...p,chip:'transparent'}:p);patchPlayer({chip:'transparent'}).catch(()=>{});}},"Transparentes")),React.createElement("label",null,"Otro color de ficha ",React.createElement("input",{type:"color",value:player.chip?.startsWith('#')?player.chip:(player.color||'#8d1b2b'),onChange:e=>{const val=e.target.value;setPlayer(p=>p?{...p,chip:val}:p);patchPlayer({chip:val}).catch(()=>{});}})),React.createElement("h3",null,"Cantidad de cartones (1, 2 o 3)"),React.createElement("p",null,"Actualmente juegas con ",React.createElement("b",null,myCards.length," ",myCards.length===1?'cartón':'cartones')," (",myCards.map(id=>'N.º '+(id+1)).join(', '),")."),React.createElement("button",{type:"button",className:"gold-button compact",onClick:()=>{
+           audio.thud();
            setSettings(false);
            setDraftCards(myCards);
            setPickingCards(true);
-          }},"🎟 Elegir 1, 2 o 3 cartones")))
+          }},"🎟 Cambiar cantidad o elegir cartones (1, 2 o 3)"),React.createElement("div",{className:"modal-accept-footer"},React.createElement("button",{type:"button",className:"gold-button green modal-accept-btn",onClick:()=>{
+            audio.chime();
+            setSettings(false);
+           }},"✅ Aceptar y volver"))))
       )))
    ),event&&seenKey!==dismissed&&(
     React.createElement(Celebration,{key:seenKey,event:event,isAdmin:admin,onCheckClaim:activeClaims[0]?()=>setReview(activeClaims[0]):undefined,onClose:()=>setDismissed(seenKey)})
@@ -4748,7 +5017,7 @@ function SharedBingo({HostApp}){
 const A='./';
 const CARD_COLORS=[['Rojo Navidad','#8d1b2b'],['Verde abeto','#194e3c'],['Azul océano','#245882'],['Violeta','#6a387a'],['Oro cálido','#987125'],['Turquesa','#087f8c'],['Coral','#ed7864'],['Rosa peonía','#d75a91'],['Lavanda','#b6a0df'],['Azul cielo','#8dcbe6'],['Menta','#9bd4b0'],['Amarillo sol','#f3ce63'],['Naranja mandarina','#e99535'],['Marrón canela','#90664c'],['Blanco puro','#ffffff']];
 function Icon({name}){return React.createElement("span",{"aria-hidden":"true"},{gear:'⚙',sound:'♫',back:'↶',palette:'◉',star:'✦',close:'×',card:'▦'}[name])}
-function MusicButton(){const [enabled,setEnabled]=useState(audio.musicEnabled);useEffect(()=>{const update=()=>setEnabled(audio.musicEnabled());window.addEventListener('bingo-audio-state',update);return()=>window.removeEventListener('bingo-audio-state',update)},[]);return React.createElement("div",{className:"music-toolbar"},React.createElement("button",{className:"music-toggle "+(enabled?'is-playing':''),"aria-label":enabled?'Apagar música':'Escuchar música',"aria-pressed":enabled,onClick:()=>audio.setMusic(!enabled)},React.createElement("span",{"aria-hidden":"true"},enabled?'♫':'♪')," ",enabled?'Parar música':'Escuchar música'),React.createElement("details",{className:"music-credit"},React.createElement("summary",null,"Créditos musicales"),"Jingle Bells · Kevin MacLeod (incompetech.com). ",React.createElement("a",{href:"https://creativecommons.org/licenses/by/3.0/",target:"_blank",rel:"noreferrer"},"CC BY 3.0"),". Grabación sin modificar, reproducida en bucle."))}
+function MusicButton(){const [enabled,setEnabled]=useState(audio.musicEnabled);useEffect(()=>{const update=()=>setEnabled(audio.musicEnabled());window.addEventListener('bingo-audio-state',update);return()=>window.removeEventListener('bingo-audio-state',update)},[]);return React.createElement("div",{className:"music-toolbar"},React.createElement("button",{type:"button",className:"music-toggle "+(enabled?'is-playing':''),"aria-label":enabled?'Parar música':'Escuchar música',"aria-pressed":enabled,onClick:()=>{audio.unlock();audio.setMusic(!enabled);}},React.createElement("span",{"aria-hidden":"true"},enabled?'♫':'♪')," ",enabled?'Parar música':'Escuchar música'),React.createElement("details",{className:"music-credit"},React.createElement("summary",null,"Créditos musicales"),"Jingle Bells · Kevin MacLeod (incompetech.com). ",React.createElement("a",{href:"https://creativecommons.org/licenses/by/3.0/",target:"_blank",rel:"noreferrer"},"CC BY 3.0"),". Grabación sin modificar, reproducida en bucle."))}
 
 function App({initialGame,onGameChange,onBroadcast,onReset,onParticipants,onAdministration,onLeaveGame,skipIntro=false,sharedBlocked=false}){
  const [s,setS]=useState(()=>{try{return {...restore(localStorage.getItem('bingo-elisabeth-v1')),...(initialGame?{drawn:initialGame.drawn,pending:initialGame.pending}: {})}}catch{return {...fresh(),...(initialGame?{drawn:initialGame.drawn,pending:initialGame.pending}:{})}}});
@@ -4823,7 +5092,7 @@ function App({initialGame,onGameChange,onBroadcast,onReset,onParticipants,onAdmi
  function mark(n,e,cardId=s.selected){const id=cardId??s.selected,key=id+'-'+n,marks=s.marks[id]||[];if(marks.includes(n)){setS(x=>({...x,marks:{...x.marks,[id]:(x.marks[id]||[]).filter(v=>v!==n)}}));lastTap.current[key]=0;return}const now=Date.now();if(e.detail===0||now-(lastTap.current[key]||0)<350){setS(x=>({...x,cardLocked:true,marks:{...x.marks,[id]:[...new Set([...(x.marks[id]||[]),n])]}}));audio.thud();lastTap.current[key]=0}else lastTap.current[key]=now}
  function card(grid,id,mini=false,extraClass=''){const Cell=mini?'span':'button';return React.createElement("div",{className:'card-unit '+extraClass,key:id},React.createElement("div",{className:'bingo-card '+(mini?'mini ':'')+((s.colors[id]||'').toLowerCase()==='#ffffff'?'white-card':'')+((s.chipColors?.[id])==='transparent'?' clear-chips':''),style:{'--card-color':s.colors[id]||'#8d1b2b','--chip-color':s.chipColors?.[id]==='transparent'?'transparent':s.chipColors?.[id]||s.colors[id]||'#8d1b2b'}},React.createElement("div",{className:"card-heading"},React.createElement(SnowGlobe,{className:"card-globe"}),React.createElement("div",{className:"card-heading-title"},React.createElement("h2",null,"CARTÓN N.º ",String(id+1).padStart(2,'0')),!mini&&React.createElement("div",{className:"card-heading-controls"},soloCards.length>1&&soloCards.map((scid,sIdx)=>React.createElement("button",{key:scid,type:"button",className:'landscape-mini-btn card-switch-mini '+(scid===id?'active-card-pill':''),onClick:()=>setSoloActiveIdx(sIdx)},"🎟 #",scid+1," (",(s.marks[scid]||[]).length,")")),React.createElement("button",{type:"button",className:"landscape-mini-btn line-mini",onClick:()=>{audio.fanfare();setSoloClaim('line')}},"¡LÍNEA!"),React.createElement("button",{type:"button",className:"landscape-mini-btn bingo-mini",onClick:()=>{audio.fanfare();audio.bells();setSoloClaim('bingo')}},"¡BINGO!"),React.createElement("button",{className:"palette-button","aria-label":"Configuración del color del cartón","aria-expanded":palette,"aria-controls":"card-colors",title:"Configurar color",onClick:()=>setPalette(p=>!p)},React.createElement(Icon,{name:"gear"})),React.createElement("button",{type:"button",className:"landscape-mini-btn exit-mini",onClick:()=>{setScreen('game');setPalette(false)},title:"Salir"},"🚪"))),React.createElement(Gnome,{className:"card-gnome"})),React.createElement("div",{className:"card-grid"},grid.flat().map((n,i)=>n?React.createElement(Cell,{key:i,onClick:mini?undefined:e=>mark(n,e,id),"aria-label":`${n}${(s.marks[id]||[]).includes(n)?', marcado':', sin marcar'}`,"aria-pressed":(s.marks[id]||[]).includes(n),className:(s.marks[id]||[]).includes(n)?'marked':''},React.createElement("span",null,n)):React.createElement("div",{key:i,className:"blank","aria-hidden":"true"},"❄")))))}
 
- return React.createElement("div",{className:'app '+(intro<3?'welcome':screen==='card'?'playing-card':'')},React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:34},(_,i)=>React.createElement("i",{key:i,style:{left:`${(i*37)%100}%`,animationDelay:`-${i*.71}s`,animationDuration:`${8+i%8}s`,opacity:.25+i%5*.12,width:3+i%5,height:3+i%5}}))),React.createElement("div",{className:"garland left","aria-hidden":"true"}),React.createElement("div",{className:"garland right","aria-hidden":"true"}),React.createElement("button",{className:"settings icon-button","aria-label":"Configuración",onClick:()=>setModal('settings')},React.createElement(Icon,{name:"gear"})),intro<3?React.createElement("main",{className:"intro"},React.createElement("p",{className:"eyebrow"},"UNA TRADICIÓN · UN POQUITO DE MAGIA"),React.createElement("h1",{className:"intro-title"},"La Navidad",React.createElement("br",null),"se juega ",React.createElement("em",null,"juntos.")),React.createElement("div",{className:"intro-stage"},intro===0?React.createElement(React.Fragment,null,React.createElement(SnowGlobe,{className:"intro-globe"}),React.createElement(Gnome,{className:"intro-gnome"})):React.createElement("video",{src:A+'pruna.mp4',autoPlay:true,muted:true,loop:true,playsInline:true,onError:()=>tell('No se ha podido reproducir el vídeo de Pruna. Puedes continuar al bingo.'),"aria-label":"Pruna bailando"})),React.createElement("p",{className:"intro-copy"},intro===0?'Bienvenidos al bingo de Elisabeth':intro===1?'Pruna ya está lista para bailar. ¿Y tú?':'Que empiece la magia de la Navidad'),React.createElement("button",{className:"gold-button start",onClick:enter},intro===0?'Toca para empezar':intro===1?'Un poquito más de magia':'Entrar al bingo'," ",React.createElement("span",null,"✦")),React.createElement("div",{className:"steps","aria-label":`Paso ${intro+1} de 3`},[0,1,2].map(i=>React.createElement("i",{className:i<=intro?'active':'',key:i})))):React.createElement(React.Fragment,null,React.createElement("header",{className:"main-header"},React.createElement("p",{className:"eyebrow"},"EL BINGO DE ELISABETH"),React.createElement("h1",{className:"bingo-title","aria-label":"Bingo"},'BINGO'.split('').map((l,i)=>React.createElement("span",{key:i,style:{'--i':i}},l))),React.createElement("p",{className:"subhead"},screen==='game'?'Una bola, una sonrisa, un recuerdo.':screen==='catalog'?'37 cartones. Elige tu suerte.':'Tu cartón de la suerte')),screen==='game'?React.createElement("main",{className:"game-layout"},React.createElement("div",{className:"bombo-music-control"},React.createElement(MusicButton,null),React.createElement(ManualButton,{role:"host",compact:true})),React.createElement("section",{className:"machine-section","aria-label":"Bombo del bingo"},React.createElement("div",{className:'machine '+(busy?'mixing ':'')+(crankSpin?'crank-spin ':'')+(returning?'hatch-open':'')},React.createElement("div",{className:"return-hatch",ref:hatchRef,"aria-hidden":"true"},React.createElement("i",null)),React.createElement("img",{className:"machine-art",src:A+'bombo.png',alt:"Bombo dorado con manivela y bol de cristal",draggable:"false"}),React.createElement("div",{className:"machine-crank","aria-hidden":"true"},React.createElement("img",{src:A+'bombo.png',alt:"",draggable:"false"})),React.createElement("div",{className:"cage",style:{'--rotation':rotation+'deg'},onPointerDown:e=>{if(busy)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,moved:false}},onPointerMove:e=>{if(!drag.current)return;const dx=e.clientX-drag.current.x,dy=e.clientY-drag.current.y;if(Math.hypot(dx,dy)>8){drag.current.moved=true;pulseCrank(900);setRotation(r=>r+dy*2+dx*.25);audio.roll(900);drag.current={x:e.clientX,y:e.clientY,moved:true}}},onPointerUp:()=>{if(drag.current){const wasMoved=drag.current.moved;drag.current=null;if(wasMoved){pulseCrank(900);setRotation(r=>r+180);audio.roll(900)}}},onPointerCancel:()=>{drag.current=null;audio.stopRoll()},role:"button",tabIndex:0,"aria-label":"Girar bombo o sacar bola",onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();extract()}},onClick:()=>{if(!busy&&!lock.current){extract()}}},React.createElement(RollingCage,{rotation:rotation,duration:2800})),dropping&&React.createElement("span",{className:"single-drop-ball","aria-hidden":"true"}),React.createElement("span",{className:"empty-bowl-cover","aria-hidden":"true"}),React.createElement("button",{className:"crank-hotspot",onClick:crank,disabled:busy||sharedBlocked,"aria-label":"Manivela: toca para girar y sacar bola",title:"Toca la manivela para girar y sacar bola"}),React.createElement("button",{className:'bowl-hotspot '+(s.pending!==null?'ready':''),disabled:s.pending===null||busy||sharedBlocked,onClick:()=>showBall(),"aria-label":s.pending!==null?'Mostrar la bola del bol':'Bol vacío'},s.pending!==null&&React.createElement("span",{className:"bowl-ball"},"✦"))),React.createElement(Gnome,{className:"side-gnome"}),React.createElement(SnowGlobe,{className:"side-globe"}),React.createElement("p",{className:"machine-status",role:"status"},busy?'Girando el bombo y sacando bola…':s.pending!==null?'¡Bola lista en el bol! Tócala para cantarla':'Toca la manivela o el bombo para sacar bola')),React.createElement("section",{className:"board-section"},React.createElement("div",{className:"board-caption"},React.createElement("span",null,"✦ NÚMEROS CANTADOS"),React.createElement("span",null,s.drawn.length," ",React.createElement("small",null,"/ 90"))),React.createElement("div",{className:'number-board '+(returning?'returning':''),ref:boardRef},NUMBERS.map(n=>React.createElement("div",{"data-number":n,key:n,className:'number-hole '+(s.drawn.includes(n)?'drawn ':'')+(s.drawn.at(-1)===n?'latest':''),"aria-label":`${n}${s.drawn.includes(n)?', cantado':''}`},React.createElement("span",null,n)))),React.createElement("div",{className:"game-actions"},React.createElement("button",{className:"gold-button",disabled:!s.drawn.length||busy||!!reveal,onClick:()=>showBall(true)},React.createElement(Icon,{name:"back"})," Repetir número"),React.createElement("button",{className:"gold-button bombo-help-button",onClick:()=>setModal('help')},"Cómo usar el bombo"),!onGameChange&&React.createElement("button",{className:"gold-button green",disabled:busy,onClick:()=>setScreen(s.selected===null?'catalog':'card')},React.createElement(Icon,{name:"card"})," Carta de bingo"),React.createElement("button",{className:"gold-button greeting-button",disabled:busy,onClick:()=>{if(onBroadcast){onBroadcast();return}audio.unlock();setGreetingOpen(true)}},React.createElement("span",{className:"greeting-button-portrait","aria-hidden":"true"})," Saludo del duende"),React.createElement("button",{className:"gold-button restart-button",disabled:busy||sharedBlocked,onClick:()=>setModal('reset')},"↻ Reiniciar partida")))):screen==='catalog'?React.createElement("main",{className:"catalog"},React.createElement("div",{className:"section-tools"},React.createElement("p",null,"Elige jugar con 1, 2 o 3 cartones."),React.createElement("button",{className:"gold-button compact",onClick:()=>setScreen('game')},"↶ Volver al bombo")),React.createElement("div",{className:"catalog-multi-header"},React.createElement("h2",null,"¿Con cuántos cartones quieres jugar?"),React.createElement("div",{className:"card-count-selector"},[1,2,3].map(n=>React.createElement("button",{key:n,type:"button",className:'count-pill-btn '+(soloCount===n?'active':''),onClick:()=>{setSoloCount(n);setSoloCards(prev=>prev.slice(0,n))}},React.createElement("span",{className:"count-icons"},'🎟'.repeat(n)),React.createElement("b",null,"Jugar con ",n," ",n===1?'cartón':'cartones')))),soloCards.length>0&&React.createElement("div",{className:"catalog-selection-bar"},React.createElement("span",null,"Seleccionados (",soloCards.length,"/",soloCount,"): ",React.createElement("b",null,soloCards.map(c=>'N.º '+(c+1)).join(', '))),React.createElement("button",{type:"button",className:"gold-button green compact",onClick:()=>{setS(x=>chooseCard(x,soloCards[0]));setScreen('card');setPalette(false);window.scrollTo(0,0)}},"✅ Jugar con ",soloCards.length===1?'este cartón':`estos ${soloCards.length} cartones`))),React.createElement("div",{className:"catalog-list"},CARDS.map((grid,id)=>{const isSel=soloCards.includes(id);return React.createElement("article",{className:'card-choice '+(isSel?'catalog-card-selected':''),key:id},card(grid,id,true),React.createElement("button",{className:"choose-label","aria-label":`Elegir cartón ${id+1}`,onClick:()=>{if(soloCount===1){setSoloCards([id]);setS(x=>chooseCard(x,id));setScreen('card');setPalette(false);window.scrollTo(0,0);return;}setSoloCards(prev=>{const next=prev.includes(id)?prev.filter(x=>x!==id):prev.length>=soloCount?[...prev.slice(0,soloCount-1),id]:[...prev,id];if(next.length)setS(x=>chooseCard(x,next[0]));return next;})}},isSel?`✓ Cartón N.º ${id+1} seleccionado`:soloCount===1?'Elegir este cartón →':`Seleccionar cartón N.º ${id+1}`))}))):React.createElement("main",{className:"card-play"},React.createElement("div",{className:"card-toolbar"},React.createElement("span",null,"✦ TU MOMENTO DE SUERTE (",Math.max(1,soloCards.length)," ",Math.max(1,soloCards.length)===1?'CARTÓN':'CARTONES',")"),React.createElement("button",{className:"gold-button compact",onClick:()=>{setScreen('catalog');setPalette(false)}},"🎟 Elegir 1, 2 o 3 cartones"),React.createElement("button",{className:"gold-button compact fullscreen-button",onClick:toggleFullscreen},fullscreen?'↙ Reducir':'⛶ Pantalla completa'),React.createElement("button",{className:"gold-button compact",onClick:()=>{setScreen('game');setPalette(false)}},"🚪 Salir del cartón")),soloCards.length>1&&React.createElement("div",{className:"multi-cards-bar"},React.createElement("div",{className:"multi-cards-tabs"},React.createElement("button",{type:"button",className:'multi-tab-btn '+(soloViewAll?'active':''),onClick:()=>setSoloViewAll(true)},"👁 Ver los ",soloCards.length," a la vez"),soloCards.map((cid,idx)=>React.createElement("button",{key:cid,type:"button",className:'multi-tab-btn '+(!soloViewAll&&soloActiveIdx===idx?'active':''),onClick:()=>{setSoloActiveIdx(idx);setSoloViewAll(false)}},"🎟 Cartón N.º ",cid+1," (",(s.marks[cid]||[]).length,"/15)")))),React.createElement("div",{className:'cards-stage-grid '+(soloCards.length>1&&soloViewAll?'show-all-'+soloCards.length:'single-focus')},(soloCards.length?soloCards:[s.selected??0]).map((cid,idx)=>{const isFoc=idx===(soloActiveIdx<soloCards.length?soloActiveIdx:0);if(!soloViewAll&&soloCards.length>1&&!isFoc)return null;return card(CARDS[cid],cid,false,isFoc?'is-landscape-active':'is-landscape-hidden')})),React.createElement("div",{className:"shared-claim-buttons"},React.createElement("button",{type:"button",className:"gold-button claim-line-btn",onClick:()=>{audio.fanfare();setSoloClaim('line')}},"📣 ¡LÍNEA!"),React.createElement("button",{type:"button",className:"gold-button green claim-bingo-btn",onClick:()=>{audio.fanfare();audio.bells();setSoloClaim('bingo')}},"🏆 ¡BINGO!")),palette&&React.createElement("div",{id:"card-colors",className:"palette-panel","aria-label":"Colores del cartón"},React.createElement("div",{className:"palette-heading"},React.createElement("strong",null,"El color de tu cartón"),React.createElement("button",{className:"text-button",onClick:()=>setPalette(false)},"Cerrar ×")),CARD_COLORS.map(([name,c])=>React.createElement("button",{key:c,title:name,"aria-label":name,"aria-pressed":(s.colors[s.selected]||'#8d1b2b').toLowerCase()===c,style:{background:c},onClick:()=>setS(x=>({...x,colors:{...x.colors,[x.selected]:c}}))})),React.createElement("label",null,"Color del cartón ",React.createElement("input",{type:"color",value:s.colors[s.selected]||'#8d1b2b',onChange:e=>setS(x=>({...x,colors:{...x.colors,[x.selected]:e.target.value}}))})),React.createElement("div",{className:"chip-settings"},React.createElement("strong",null,"Color de las fichas"),React.createElement("p",null,"Combínalas con el cartón o elige otro color."),React.createElement("div",{className:"chip-options"},React.createElement("button",{className:"text-button","aria-pressed":!s.chipColors?.[s.selected],onClick:()=>setS(x=>{const chipColors={...x.chipColors};delete chipColors[x.selected];return {...x,chipColors}})},"A juego con el cartón"),React.createElement("button",{className:"text-button","aria-pressed":s.chipColors?.[s.selected]==='transparent',onClick:()=>setS(x=>({...x,chipColors:{...x.chipColors,[x.selected]:'transparent'}}))},"◯ Transparente"),React.createElement("label",null,"Personalizado ",React.createElement("input",{type:"color","aria-label":"Color personalizado de las fichas",value:/^#[0-9a-f]{6}$/i.test(s.chipColors?.[s.selected]||'')?s.chipColors[s.selected]:s.colors[s.selected]||'#8d1b2b',onChange:e=>setS(x=>({...x,chipColors:{...x.chipColors,[x.selected]:e.target.value}}))}))))),React.createElement("p",{className:"card-instruction"},"Dos toques para marcar · Un toque para retirar"),React.createElement("div",{className:"card-bottom"},React.createElement("div",null,s.cardLocked?React.createElement("p",{className:"locked-card",role:"status"},"✦ Cartón fijado para esta partida"):React.createElement("button",{className:"gold-button",onClick:()=>{setScreen('catalog');setPalette(false)}},"↶ Cambiar cartón"),React.createElement("p",{className:"rotate-note"},"Gira el móvil para ver solo tu cartón en grande."),React.createElement("p",{className:"marked-count"},(s.marks[s.selected]||[]).length," de 15 números marcados"))))),React.createElement("footer",null,React.createElement("span",null,"✧")," Creado por ",React.createElement("em",null,"Elisabeth")," ",React.createElement("span",null,"✧"),React.createElement("small",null,"Comparte la alegría de la Navidad"),intro<3&&React.createElement("span",{className:"app-version","aria-label":"Versión 10"},"V10")),intro>=3&&screen==='game'&&React.createElement("div",{className:"host-version","aria-label":"Versión 10"},"V10"),notice&&React.createElement("div",{className:"toast",role:"status"},notice,React.createElement("button",{"aria-label":"Cerrar aviso",onClick:()=>setNotice('')},"×")),returning&&React.createElement("div",{className:"return-flight","aria-label":"Las bolas vuelven al bombo"},returnBalls.map(b=>React.createElement("span",{key:b.n,className:"returning-ball",style:{left:b.x,top:b.y,'--dx':b.dx+'px','--dy':b.dy+'px',animationDelay:b.delay+'ms',animationDuration:b.duration+'ms'}},b.n))),greetingOpen&&React.createElement(Greeting,{onClose:()=>{setGreetingOpen(false);audio.stopSpeech()}}),soloClaim&&React.createElement("div",{className:"greeting-overlay"},React.createElement(Confetti,null),React.createElement("section",{className:"greeting-show",role:"dialog","aria-modal":"true"},React.createElement("h2",null,"¡Has cantado ",soloClaim==='line'?'LÍNEA':'BINGO',"!"),React.createElement(Gnome,{className:"broadcast-gnome",autoGreet:true}),React.createElement("div",{className:"celebration-actions"},React.createElement("button",{className:"gold-button green compact",onClick:()=>setSoloClaim(null)},"¡Seguir jugando!")))),(modal||reveal)&&React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:'modal '+(reveal?'reveal-modal':''),role:"dialog","aria-modal":"true","aria-label":reveal?'Número '+reveal.n:modal==='settings'?'Configuración':modal==='end'?'Fin del bingo':modal==='phrases'?'Frases de los números':modal==='reset'?'Confirmar reinicio':'Cómo jugar',tabIndex:-1,ref:modalRef},reveal?React.createElement(React.Fragment,null,React.createElement("p",{className:"eyebrow"},reveal.repeat?'VOLVEMOS A CANTAR…':'LA SUERTE DICE…'),React.createElement("button",{className:"big-ball",ref:ballRef,onClick:closeBall,"aria-label":reveal.repeat?'Cerrar número repetido':'Colocar '+reveal.n+' en el tablero'},reveal.n),React.createElement("p",null,reveal.repeat?'Toca la bola para volver':'Toca la bola para colocarla en el tablero')):modal==='end'?React.createElement("button",{className:"end-button",onClick:startAgain},React.createElement("span",{className:"modal-star"},"✦"),React.createElement("h2",null,"¡Se acabó el bingo!"),React.createElement("p",null,"90 números, un montón de recuerdos."),React.createElement("strong",null,"Toca para devolver las bolas al bombo",React.createElement("br",null),"y empezar otra partida")):React.createElement(React.Fragment,null,React.createElement("button",{className:"close icon-button","aria-label":"Cerrar ventana",onClick:()=>setModal(null)},"×"),React.createElement("span",{className:"modal-star"},"✦"),modal==='reset'?React.createElement(React.Fragment,null,React.createElement("h2",null,"¿Empezamos de nuevo?"),React.createElement("p",null,"Las bolas volverán volando al bombo y se borrarán las fichas de los cartones de la partida."),React.createElement("p",null,"Conservarás tus colores, frases y ajustes."),React.createElement("div",{className:"reset-actions"},React.createElement("button",{className:"gold-button green",onClick:()=>setModal(null)},"No, seguir jugando"),React.createElement("button",{className:"gold-button",onClick:startAgain},"Sí, reiniciar partida"))):modal==='help'?React.createElement(React.Fragment,null,React.createElement("h2",null,"Cómo usar el bombo"),React.createElement("ol",{className:"bombo-help-steps"},React.createElement("li",null,React.createElement("b",null,"Gira la manivela o el bombo.")," Toca la manivela dorada (o el bombo) y verás girar la manivela y las bolas y caer una bola al bol."),React.createElement("li",null,React.createElement("b",null,"Descubre el número.")," Toca el bol de cristal para ver la bola en grande y escuchar su frase."),React.createElement("li",null,React.createElement("b",null,"Colócala en el tablero.")," Toca la bola grande y viajará a su casilla.")),React.createElement("button",{className:"gold-button",onClick:()=>setModal(null)},"¡Vamos a jugar!")):modal==='phrases'?React.createElement(React.Fragment,null,React.createElement("h2",null,"La voz de tu bingo"),React.createElement("p",{className:"phrase-intro"},"Una frase para cada bola. Cámbiala por un dicho, una broma o una dedicatoria."),React.createElement("label",{className:"phrase-field"},"Número",React.createElement("select",{value:phraseNumber,onChange:e=>{const n=Number(e.target.value);setPhraseNumber(n);setPhraseDraft(s.phrases[n]??SAYINGS[n])}},NUMBERS.map(n=>React.createElement("option",{value:n,key:n},"Número ",n)))),React.createElement("label",{className:"phrase-field"},"Tu frase",React.createElement("textarea",{rows:3,value:phraseDraft,onChange:e=>setPhraseDraft(e.target.value),placeholder:"Escribe lo que dirá esta bola"})),React.createElement("p",{className:"phrase-preview"},"«",announcement(phraseNumber,{[phraseNumber]:phraseDraft}),"»"),React.createElement("div",{className:"phrase-actions"},React.createElement("button",{className:"gold-button green",onClick:()=>{audio.unlock();audio.speak(announcement(phraseNumber,{[phraseNumber]:phraseDraft}),()=>tell('Activa la voz y comprueba que haya una voz española en el dispositivo.'))}},"♫ Escuchar"),React.createElement("button",{className:"gold-button",onClick:()=>{setS(x=>({...x,phrases:{...x.phrases,[phraseNumber]:phraseDraft.trim()}}));tell('Frase del número '+phraseNumber+' guardada')}},"Guardar frase")),React.createElement("button",{className:"text-button",onClick:()=>{setPhraseDraft(SAYINGS[phraseNumber]);setS(x=>{const phrases={...x.phrases};delete phrases[phraseNumber];return {...x,phrases}});tell('Frase original recuperada')}},"Recuperar la frase original"),React.createElement("p",{className:"muted"},"Se guarda en este dispositivo. Si dejas la frase vacía, solo se dirá el número."),React.createElement("button",{className:"text-button",onClick:()=>setModal('settings')},"Volver a configuración")):React.createElement(React.Fragment,null,React.createElement("h2",null,"Configuración"),React.createElement(ManualButton,{role:onAdministration?'owner':'host'}),onAdministration&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onAdministration()}},"👑 Panel y Manual 3 de Elisabeth"),onParticipants&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onParticipants()}},"👥 Jugadores de la partida"),React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setPhraseDraft(s.phrases[phraseNumber]??SAYINGS[phraseNumber]);setModal('phrases')}},"🗣 Frases de los números"),[['sound','Sonido de la app'],['music','Música navideña'],['voice','Cantar los números']].map(([k,label])=>React.createElement("label",{className:"setting-row",key:k},React.createElement("span",null,label),React.createElement("input",{type:"checkbox",checked:s[k],onChange:e=>{audio.unlock();if(k==='music')audio.setMusic(e.target.checked);setS(x=>({...x,[k]:e.target.checked}))}}))),React.createElement("div",{className:"credits"},React.createElement("h3",null,"Creado por Elisabeth"),React.createElement("p",null,"Disfruta de esta app y comparte la alegría.",React.createElement("br",null),"Si la utilizas, menciona a ",React.createElement("b",null,"Elisabeth"),".")),onLeaveGame&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onLeaveGame()}},"🚪 Salir de la partida al inicio"),React.createElement("button",{className:"text-button",onClick:()=>setModal('reset')},"Empezar una partida nueva"),modal==='reset'&&React.createElement("div",{className:"reset-confirm"},React.createElement("p",null,"Se borrarán los números cantados y las fichas de los cartones."),React.createElement("button",{className:"gold-button",onClick:startAgain},"Sí, empezar de nuevo"),React.createElement("button",{className:"text-button",onClick:()=>setModal('settings')},"Conservar mi partida")))))),flying&&React.createElement("div",{className:"flying-ball",style:{left:flying.x,top:flying.y,width:flying.size,height:flying.size,'--dx':flying.dx+'px','--dy':flying.dy+'px','--scale':flying.scale}},flying.n))
+ return React.createElement("div",{className:'app '+(intro<3?'welcome':screen==='card'?'playing-card':'')},React.createElement("div",{className:"snow","aria-hidden":"true"},Array.from({length:34},(_,i)=>React.createElement("i",{key:i,style:{left:`${(i*37)%100}%`,animationDelay:`-${i*.71}s`,animationDuration:`${8+i%8}s`,opacity:.25+i%5*.12,width:3+i%5,height:3+i%5}}))),React.createElement("div",{className:"garland left","aria-hidden":"true"}),React.createElement("div",{className:"garland right","aria-hidden":"true"}),React.createElement("button",{className:"settings icon-button","aria-label":"Configuración",onClick:()=>setModal('settings')},React.createElement(Icon,{name:"gear"})),intro<3?React.createElement("main",{className:"intro"},React.createElement("p",{className:"eyebrow"},"UNA TRADICIÓN · UN POQUITO DE MAGIA"),React.createElement("h1",{className:"intro-title"},"La Navidad",React.createElement("br",null),"se juega ",React.createElement("em",null,"juntos.")),React.createElement("div",{className:"intro-stage"},intro===0?React.createElement(React.Fragment,null,React.createElement(SnowGlobe,{className:"intro-globe"}),React.createElement(Gnome,{className:"intro-gnome"})):React.createElement("video",{src:A+'pruna.mp4',autoPlay:true,muted:true,loop:true,playsInline:true,onError:()=>tell('No se ha podido reproducir el vídeo de Pruna. Puedes continuar al bingo.'),"aria-label":"Pruna bailando"})),React.createElement("p",{className:"intro-copy"},intro===0?'Bienvenidos al bingo de Elisabeth':intro===1?'Pruna ya está lista para bailar. ¿Y tú?':'Que empiece la magia de la Navidad'),React.createElement("button",{className:"gold-button start",onClick:enter},intro===0?'Toca para empezar':intro===1?'Un poquito más de magia':'Entrar al bingo'," ",React.createElement("span",null,"✦")),React.createElement("div",{className:"steps","aria-label":`Paso ${intro+1} de 3`},[0,1,2].map(i=>React.createElement("i",{className:i<=intro?'active':'',key:i})))):React.createElement(React.Fragment,null,React.createElement("header",{className:"main-header"},React.createElement("p",{className:"eyebrow"},"EL BINGO DE ELISABETH"),React.createElement("h1",{className:"bingo-title","aria-label":"Bingo"},'BINGO'.split('').map((l,i)=>React.createElement("span",{key:i,style:{'--i':i}},l))),React.createElement("p",{className:"subhead"},screen==='game'?'Una bola, una sonrisa, un recuerdo.':screen==='catalog'?'37 cartones. Elige tu suerte.':'Tu cartón de la suerte')),screen==='game'?React.createElement("main",{className:"game-layout"},React.createElement("div",{className:"bombo-music-control"},React.createElement(MusicButton,null),React.createElement(ManualButton,{role:"host",compact:true})),React.createElement("section",{className:"machine-section","aria-label":"Bombo del bingo"},React.createElement("div",{className:'machine '+(busy?'mixing ':'')+(crankSpin?'crank-spin ':'')+(returning?'hatch-open':'')},React.createElement("div",{className:"return-hatch",ref:hatchRef,"aria-hidden":"true"},React.createElement("i",null)),React.createElement("img",{className:"machine-art",src:A+'bombo.png',alt:"Bombo dorado con manivela y bol de cristal",draggable:"false"}),React.createElement("div",{className:"machine-crank","aria-hidden":"true"},React.createElement("img",{src:A+'bombo.png',alt:"",draggable:"false"})),React.createElement("div",{className:"cage",style:{'--rotation':rotation+'deg'},onPointerDown:e=>{if(busy)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,moved:false}},onPointerMove:e=>{if(!drag.current)return;const dx=e.clientX-drag.current.x,dy=e.clientY-drag.current.y;if(Math.hypot(dx,dy)>8){drag.current.moved=true;pulseCrank(900);setRotation(r=>r+dy*2+dx*.25);audio.roll(900);drag.current={x:e.clientX,y:e.clientY,moved:true}}},onPointerUp:()=>{if(drag.current){const wasMoved=drag.current.moved;drag.current=null;if(wasMoved){pulseCrank(900);setRotation(r=>r+180);audio.roll(900)}}},onPointerCancel:()=>{drag.current=null;audio.stopRoll()},role:"button",tabIndex:0,"aria-label":"Girar bombo o sacar bola",onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();extract()}},onClick:()=>{if(!busy&&!lock.current){extract()}}},React.createElement(RollingCage,{rotation:rotation,duration:2800})),dropping&&React.createElement("span",{className:"single-drop-ball","aria-hidden":"true"}),React.createElement("span",{className:"empty-bowl-cover","aria-hidden":"true"}),React.createElement("button",{className:"crank-hotspot",onClick:crank,disabled:busy||sharedBlocked,"aria-label":"Manivela: toca para girar y sacar bola",title:"Toca la manivela para girar y sacar bola"}),React.createElement("button",{className:'bowl-hotspot '+(s.pending!==null?'ready':''),disabled:s.pending===null||busy||sharedBlocked,onClick:()=>showBall(),"aria-label":s.pending!==null?'Mostrar la bola del bol':'Bol vacío'},s.pending!==null&&React.createElement("span",{className:"bowl-ball"},"✦"))),React.createElement(Gnome,{className:"side-gnome"}),React.createElement(SnowGlobe,{className:"side-globe"}),React.createElement("p",{className:"machine-status",role:"status"},busy?'Girando el bombo y sacando bola…':s.pending!==null?'¡Bola lista en el bol! Tócala para cantarla':'Toca la manivela o el bombo para sacar bola')),React.createElement("section",{className:"board-section"},React.createElement("div",{className:"board-caption"},React.createElement("span",null,"✦ NÚMEROS CANTADOS"),React.createElement("span",null,s.drawn.length," ",React.createElement("small",null,"/ 90"))),React.createElement("div",{className:'number-board '+(returning?'returning':''),ref:boardRef},NUMBERS.map(n=>React.createElement("div",{"data-number":n,key:n,className:'number-hole '+(s.drawn.includes(n)?'drawn ':'')+(s.drawn.at(-1)===n?'latest':''),"aria-label":`${n}${s.drawn.includes(n)?', cantado':''}`},React.createElement("span",null,n)))),React.createElement("div",{className:"game-actions"},React.createElement("button",{className:"gold-button",disabled:!s.drawn.length||busy||!!reveal,onClick:()=>showBall(true)},React.createElement(Icon,{name:"back"})," Repetir número"),React.createElement("button",{className:"gold-button bombo-help-button",onClick:()=>setModal('help')},"Cómo usar el bombo"),!onGameChange&&React.createElement("button",{className:"gold-button green",disabled:busy,onClick:()=>setScreen(s.selected===null?'catalog':'card')},React.createElement(Icon,{name:"card"})," Carta de bingo"),React.createElement("button",{className:"gold-button greeting-button",disabled:busy,onClick:()=>{if(onBroadcast){onBroadcast();return}audio.unlock();setGreetingOpen(true)}},React.createElement("span",{className:"greeting-button-portrait","aria-hidden":"true"})," Saludo del duende"),React.createElement("button",{className:"gold-button restart-button",disabled:busy||sharedBlocked,onClick:()=>setModal('reset')},"↻ Reiniciar partida")))):screen==='catalog'?React.createElement("main",{className:"catalog"},React.createElement("div",{className:"section-tools"},React.createElement("p",null,"Elige jugar con 1, 2 o 3 cartones."),React.createElement("button",{className:"gold-button compact",onClick:()=>setScreen('game')},"↶ Volver al bombo")),React.createElement("div",{className:"catalog-multi-header"},React.createElement("h2",null,"¿Con cuántos cartones quieres jugar?"),React.createElement("div",{className:"card-count-selector"},[1,2,3].map(n=>React.createElement("button",{key:n,type:"button",className:'count-pill-btn '+(soloCount===n?'active':''),onClick:()=>{audio.thud();setSoloCount(n);setSoloCards(prev=>prev.slice(0,n))}},React.createElement("span",{className:"count-icons"},'🎟'.repeat(n)),React.createElement("b",null,"Jugar con ",n," ",n===1?'cartón':'cartones')))),React.createElement("div",{className:"catalog-selection-bar"},React.createElement("div",{className:"catalog-selection-status"},React.createElement("span",null,"Seleccionados (",soloCards.length,"/",soloCount,"): ",React.createElement("b",null,soloCards.length?soloCards.map(c=>'N.º '+(c+1)).join(', '):'Elige abajo o al azar'))),React.createElement("div",{className:"catalog-selection-actions"},React.createElement("button",{type:"button",className:"gold-button compact",onClick:()=>{audio.chime();const pool=CARDS.map((_,i)=>i);const picked=[];while(picked.length<soloCount&&pool.length){picked.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);}setSoloCards(picked);setS(x=>chooseCard(x,picked[0]));setScreen('card');setPalette(false);window.scrollTo(0,0);}},"🎲 Elegir ",soloCount," al azar y jugar"),soloCards.length>0&&React.createElement("button",{type:"button",className:"gold-button green compact",onClick:()=>{audio.chime();setS(x=>chooseCard(x,soloCards[0]));setScreen('card');setPalette(false);window.scrollTo(0,0)}},"✅ Aceptar y jugar con ",soloCards.length===1?'este cartón':`estos ${soloCards.length} cartones`)))),React.createElement("div",{className:"catalog-list"},CARDS.map((grid,id)=>{const isSel=soloCards.includes(id);return React.createElement("article",{className:'card-choice '+(isSel?'catalog-card-selected':''),key:id},card(grid,id,true),React.createElement("button",{className:"choose-label","aria-label":`Elegir cartón ${id+1}`,onClick:()=>{audio.thud();if(soloCount===1){setSoloCards([id]);setS(x=>chooseCard(x,id));setScreen('card');setPalette(false);window.scrollTo(0,0);return;}setSoloCards(prev=>{const next=prev.includes(id)?prev.filter(x=>x!==id):prev.length>=soloCount?[...prev.slice(0,soloCount-1),id]:[...prev,id];if(next.length)setS(x=>chooseCard(x,next[0]));return next;})}},isSel?`✓ Cartón N.º ${id+1} seleccionado`:soloCount===1?'Elegir este cartón →':`Seleccionar cartón N.º ${id+1}`))}))):React.createElement("main",{className:"card-play"},React.createElement("div",{className:"card-toolbar"},React.createElement("span",null,"✦ TU MOMENTO DE SUERTE (",Math.max(1,soloCards.length)," ",Math.max(1,soloCards.length)===1?'CARTÓN':'CARTONES',")"),React.createElement("button",{className:"gold-button compact",onClick:()=>{setScreen('catalog');setPalette(false)}},"🎟 Elegir 1, 2 o 3 cartones"),React.createElement("button",{className:"gold-button compact fullscreen-button",onClick:toggleFullscreen},fullscreen?'↙ Reducir':'⛶ Pantalla completa'),React.createElement("button",{className:"gold-button compact",onClick:()=>{setScreen('game');setPalette(false)}},"🚪 Salir del cartón")),soloCards.length>1&&React.createElement("div",{className:"multi-cards-bar"},React.createElement("div",{className:"multi-cards-tabs"},React.createElement("button",{type:"button",className:'multi-tab-btn '+(soloViewAll?'active':''),onClick:()=>setSoloViewAll(true)},"👁 Ver los ",soloCards.length," a la vez"),soloCards.map((cid,idx)=>React.createElement("button",{key:cid,type:"button",className:'multi-tab-btn '+(!soloViewAll&&soloActiveIdx===idx?'active':''),onClick:()=>{setSoloActiveIdx(idx);setSoloViewAll(false)}},"🎟 Cartón N.º ",cid+1," (",(s.marks[cid]||[]).length,"/15)")))),React.createElement("div",{className:'cards-stage-grid '+(soloCards.length>1&&soloViewAll?'show-all-'+soloCards.length:'single-focus')},(soloCards.length?soloCards:[s.selected??0]).map((cid,idx)=>{const isFoc=idx===(soloActiveIdx<soloCards.length?soloActiveIdx:0);if(!soloViewAll&&soloCards.length>1&&!isFoc)return null;return card(CARDS[cid],cid,false,isFoc?'is-landscape-active':'is-landscape-hidden')})),React.createElement("div",{className:"shared-claim-buttons"},React.createElement("button",{type:"button",className:"gold-button claim-line-btn",onClick:()=>{audio.fanfare();setSoloClaim('line')}},"📣 ¡LÍNEA!"),React.createElement("button",{type:"button",className:"gold-button green claim-bingo-btn",onClick:()=>{audio.fanfare();audio.bells();setSoloClaim('bingo')}},"🏆 ¡BINGO!")),palette&&React.createElement("div",{id:"card-colors",className:"palette-panel","aria-label":"Colores del cartón"},React.createElement("div",{className:"palette-heading"},React.createElement("strong",null,"Personaliza tus cartones"),React.createElement("button",{className:"text-button",onClick:()=>setPalette(false)},"Cerrar ×")),CARD_COLORS.map(([name,c])=>React.createElement("button",{key:c,title:name,"aria-label":name,"aria-pressed":(s.colors[s.selected]||'#8d1b2b').toLowerCase()===c,style:{background:c},onClick:()=>{audio.thud();setS(x=>({...x,colors:{...x.colors,[x.selected]:c}}));}})),React.createElement("label",null,"Color del cartón ",React.createElement("input",{type:"color",value:s.colors[s.selected]||'#8d1b2b',onChange:e=>setS(x=>({...x,colors:{...x.colors,[x.selected]:e.target.value}}))})),React.createElement("div",{className:"chip-settings"},React.createElement("strong",null,"Color de las fichas"),React.createElement("p",null,"Combínalas con el cartón o elige otro color."),React.createElement("div",{className:"chip-options"},React.createElement("button",{className:"text-button","aria-pressed":!s.chipColors?.[s.selected],onClick:()=>{audio.thud();setS(x=>{const chipColors={...x.chipColors};delete chipColors[x.selected];return {...x,chipColors}});}},"A juego con el cartón"),React.createElement("button",{className:"text-button","aria-pressed":s.chipColors?.[s.selected]==='transparent',onClick:()=>{audio.thud();setS(x=>({...x,chipColors:{...x.chipColors,[x.selected]:'transparent'}}));}},"◯ Transparente"),React.createElement("label",null,"Personalizado ",React.createElement("input",{type:"color","aria-label":"Color personalizado de las fichas",value:/^#[0-9a-f]{6}$/i.test(s.chipColors?.[s.selected]||'')?s.chipColors[s.selected]:s.colors[s.selected]||'#8d1b2b',onChange:e=>setS(x=>({...x,chipColors:{...x.chipColors,[x.selected]:e.target.value}}))})))),React.createElement("div",{className:"modal-accept-footer"},React.createElement("button",{type:"button",className:"gold-button green modal-accept-btn",onClick:()=>{audio.chime();setPalette(false);}},"✅ Aceptar y volver"))),React.createElement("p",{className:"card-instruction"},"Dos toques para marcar · Un toque para retirar"),React.createElement("div",{className:"card-bottom"},React.createElement("div",null,s.cardLocked?React.createElement("p",{className:"locked-card",role:"status"},"✦ Cartón fijado para esta partida"):React.createElement("button",{className:"gold-button",onClick:()=>{setScreen('catalog');setPalette(false)}},"↶ Cambiar cartón"),React.createElement("p",{className:"rotate-note"},"Gira el móvil para ver solo tu cartón en grande."),React.createElement("p",{className:"marked-count"},(s.marks[s.selected]||[]).length," de 15 números marcados"))))),React.createElement("footer",null,React.createElement("span",null,"✧")," Creado por ",React.createElement("em",null,"Elisabeth")," ",React.createElement("span",null,"✧"),React.createElement("small",null,"Comparte la alegría de la Navidad"),intro<3&&React.createElement("span",{className:"app-version","aria-label":"Versión 11"},"V11")),intro>=3&&screen==='game'&&React.createElement("div",{className:"host-version","aria-label":"Versión 11"},"V11"),notice&&React.createElement("div",{className:"toast",role:"status"},notice,React.createElement("button",{"aria-label":"Cerrar aviso",onClick:()=>setNotice('')},"×")),returning&&React.createElement("div",{className:"return-flight","aria-label":"Las bolas vuelven al bombo"},returnBalls.map(b=>React.createElement("span",{key:b.n,className:"returning-ball",style:{left:b.x,top:b.y,'--dx':b.dx+'px','--dy':b.dy+'px',animationDelay:b.delay+'ms',animationDuration:b.duration+'ms'}},b.n))),greetingOpen&&React.createElement(Greeting,{onClose:()=>{setGreetingOpen(false);audio.stopSpeech()}}),soloClaim&&React.createElement("div",{className:"greeting-overlay"},React.createElement(Confetti,null),React.createElement("section",{className:"greeting-show",role:"dialog","aria-modal":"true"},React.createElement("h2",null,"¡Has cantado ",soloClaim==='line'?'LÍNEA':'BINGO',"!"),React.createElement(Gnome,{className:"broadcast-gnome",autoGreet:true}),React.createElement("div",{className:"celebration-actions"},React.createElement("button",{className:"gold-button green compact",onClick:()=>setSoloClaim(null)},"¡Seguir jugando!")))),(modal||reveal)&&React.createElement("div",{className:"modal-backdrop"},React.createElement("section",{className:'modal '+(reveal?'reveal-modal':''),role:"dialog","aria-modal":"true","aria-label":reveal?'Número '+reveal.n:modal==='settings'?'Configuración':modal==='end'?'Fin del bingo':modal==='phrases'?'Frases de los números':modal==='reset'?'Confirmar reinicio':'Cómo jugar',tabIndex:-1,ref:modalRef},reveal?React.createElement(React.Fragment,null,React.createElement("p",{className:"eyebrow"},reveal.repeat?'VOLVEMOS A CANTAR…':'LA SUERTE DICE…'),React.createElement("button",{className:"big-ball",ref:ballRef,onClick:closeBall,"aria-label":reveal.repeat?'Cerrar número repetido':'Colocar '+reveal.n+' en el tablero'},reveal.n),React.createElement("p",null,reveal.repeat?'Toca la bola para volver':'Toca la bola para colocarla en el tablero')):modal==='end'?React.createElement("button",{className:"end-button",onClick:startAgain},React.createElement("span",{className:"modal-star"},"✦"),React.createElement("h2",null,"¡Se acabó el bingo!"),React.createElement("p",null,"90 números, un montón de recuerdos."),React.createElement("strong",null,"Toca para devolver las bolas al bombo",React.createElement("br",null),"y empezar otra partida")):React.createElement(React.Fragment,null,React.createElement("button",{className:"close icon-button","aria-label":"Cerrar ventana",onClick:()=>setModal(null)},"×"),React.createElement("span",{className:"modal-star"},"✦"),modal==='reset'?React.createElement(React.Fragment,null,React.createElement("h2",null,"¿Empezamos de nuevo?"),React.createElement("p",null,"Las bolas volverán volando al bombo y se borrarán las fichas de los cartones de la partida."),React.createElement("p",null,"Conservarás tus colores, frases y ajustes."),React.createElement("div",{className:"reset-actions"},React.createElement("button",{className:"gold-button green",onClick:()=>setModal(null)},"No, seguir jugando"),React.createElement("button",{className:"gold-button",onClick:startAgain},"Sí, reiniciar partida"))):modal==='help'?React.createElement(React.Fragment,null,React.createElement("h2",null,"Cómo usar el bombo"),React.createElement("ol",{className:"bombo-help-steps"},React.createElement("li",null,React.createElement("b",null,"Gira la manivela o el bombo.")," Toca la manivela dorada (o el bombo) y verás girar la manivela y las bolas y caer una bola al bol."),React.createElement("li",null,React.createElement("b",null,"Descubre el número.")," Toca el bol de cristal para ver la bola en grande y escuchar su frase."),React.createElement("li",null,React.createElement("b",null,"Colócala en el tablero.")," Toca la bola grande y viajará a su casilla.")),React.createElement("button",{className:"gold-button",onClick:()=>setModal(null)},"¡Vamos a jugar!")):modal==='phrases'?React.createElement(React.Fragment,null,React.createElement("h2",null,"La voz de tu bingo"),React.createElement("p",{className:"phrase-intro"},"Una frase para cada bola. Cámbiala por un dicho, una broma o una dedicatoria."),React.createElement("label",{className:"phrase-field"},"Número",React.createElement("select",{value:phraseNumber,onChange:e=>{const n=Number(e.target.value);setPhraseNumber(n);setPhraseDraft(s.phrases[n]??SAYINGS[n])}},NUMBERS.map(n=>React.createElement("option",{value:n,key:n},"Número ",n)))),React.createElement("label",{className:"phrase-field"},"Tu frase",React.createElement("textarea",{rows:3,value:phraseDraft,onChange:e=>setPhraseDraft(e.target.value),placeholder:"Escribe lo que dirá esta bola"})),React.createElement("p",{className:"phrase-preview"},"«",announcement(phraseNumber,{[phraseNumber]:phraseDraft}),"»"),React.createElement("div",{className:"phrase-actions"},React.createElement("button",{className:"gold-button green",onClick:()=>{audio.unlock();audio.speak(announcement(phraseNumber,{[phraseNumber]:phraseDraft}),()=>tell('Activa la voz y comprueba que haya una voz española en el dispositivo.'))}},"♫ Escuchar"),React.createElement("button",{className:"gold-button",onClick:()=>{setS(x=>({...x,phrases:{...x.phrases,[phraseNumber]:phraseDraft.trim()}}));tell('Frase del número '+phraseNumber+' guardada')}},"Guardar frase")),React.createElement("button",{className:"text-button",onClick:()=>{setPhraseDraft(SAYINGS[phraseNumber]);setS(x=>{const phrases={...x.phrases};delete phrases[phraseNumber];return {...x,phrases}});tell('Frase original recuperada')}},"Recuperar la frase original"),React.createElement("p",{className:"muted"},"Se guarda en este dispositivo. Si dejas la frase vacía, solo se dirá el número."),React.createElement("button",{className:"text-button",onClick:()=>setModal('settings')},"Volver a configuración")):React.createElement(React.Fragment,null,React.createElement("h2",null,"Configuración"),React.createElement(ManualButton,{role:onAdministration?'owner':'host'}),onAdministration&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onAdministration()}},"👑 Panel y Manual 3 de Elisabeth"),onParticipants&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onParticipants()}},"👥 Jugadores de la partida"),React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setPhraseDraft(s.phrases[phraseNumber]??SAYINGS[phraseNumber]);setModal('phrases')}},"🗣 Frases de los números"),[['sound','Sonido de la app'],['voice','Cantar los números']].map(([k,label])=>React.createElement("label",{className:"setting-row",key:k},React.createElement("span",null,label),React.createElement("input",{type:"checkbox",checked:s[k],onChange:e=>{audio.unlock();setS(x=>({...x,[k]:e.target.checked}))}}))),React.createElement("div",{className:"credits"},React.createElement("h3",null,"Creado por Elisabeth"),React.createElement("p",null,"Disfruta de esta app y comparte la alegría.",React.createElement("br",null),"Si la utilizas, menciona a ",React.createElement("b",null,"Elisabeth"),".")),onLeaveGame&&React.createElement("button",{className:"gold-button phrase-open",onClick:()=>{setModal(null);onLeaveGame()}},"🚪 Salir de la partida al inicio"),React.createElement("button",{className:"text-button",onClick:()=>setModal('reset')},"Empezar una partida nueva"),modal==='reset'&&React.createElement("div",{className:"reset-confirm"},React.createElement("p",null,"Se borrarán los números cantados y las fichas de los cartones."),React.createElement("button",{className:"gold-button",onClick:startAgain},"Sí, empezar de nuevo"),React.createElement("button",{className:"text-button",onClick:()=>setModal('settings')},"Conservar mi partida")))))),flying&&React.createElement("div",{className:"flying-ball",style:{left:flying.x,top:flying.y,width:flying.size,height:flying.size,'--dx':flying.dx+'px','--dy':flying.dy+'px','--scale':flying.scale}},flying.n))
 }
 if(true&&'serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 createRoot(document.getElementById('root')).render(React.createElement(React.Fragment,null,React.createElement(MusicButton,null),React.createElement(SharedBingo,{HostApp:App})));

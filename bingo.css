@@ -957,3 +957,124 @@
     display: none !important;
   }
 }
+
+/* ================= RESPUESTA TÁCTIL FLUIDA DE TODOS LOS BOTONES Y MEJORAS DE SESIÓN/PRUNA ================= */
+button {
+  transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.12s ease, box-shadow 0.12s ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.95) translateY(2px) !important;
+  filter: brightness(1.18) saturate(1.1) !important;
+}
+.gold-button:not(:disabled):active,
+.count-pill-btn:not(:disabled):active,
+.multi-tab-btn:not(:disabled):active,
+.status-gold-btn:not(:disabled):active,
+.music-toggle:not(:disabled):active {
+  transform: scale(0.94) translateY(2px) !important;
+  box-shadow: 0 0 0 3px #ffe28a, 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+}
+
+.welcome-pruna,
+.lobby-pruna-box {
+  position: relative;
+  cursor: pointer;
+}
+.pruna-tap-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(23, 61, 48, 0.88);
+  color: #fff6dc;
+  border: 1.5px solid #e6c168;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font: 700 12px system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+.pruna-tap-badge.is-paused {
+  background: rgba(141, 27, 43, 0.92);
+}
+
+.session-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px auto 14px;
+  padding: 11px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffdf4, #f5e6c0);
+  border: 2px solid #c59b44;
+  color: #173d30;
+  font: 600 14px/1.4 system-ui, sans-serif;
+  box-shadow: 0 4px 12px rgba(112, 83, 37, 0.15);
+}
+.session-status-banner.in-room-banner {
+  max-width: 980px;
+  margin: 8px auto;
+}
+
+.session-reconnect-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 12px auto 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f3fbf6, #e2f3e9);
+  border: 2px solid #194e3c;
+  box-shadow: 0 4px 14px rgba(25, 78, 60, 0.14);
+}
+.session-reconnect-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: 14px system-ui, sans-serif;
+  color: #173d30;
+}
+.session-reconnect-info b {
+  font-size: 16px;
+  color: #8d1b2b;
+}
+.session-reconnect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-accept-footer {
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 2px solid #dfc589;
+  display: flex;
+  justify-content: center;
+}
+.modal-accept-btn {
+  width: 100%;
+  max-width: 340px;
+  font-weight: 700;
+  font-size: 18px !important;
+}
+
+.player-bottom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+.roster-sub {
+  font: 13px/1.4 system-ui, sans-serif;
+  color: #675237;
+  margin: -8px 0 12px;
+}
