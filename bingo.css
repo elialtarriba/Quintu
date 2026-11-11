@@ -1370,3 +1370,14 @@ button {
 
 /* V21: barra de partida compacta y controles en dos filas */
 .status-top-info{display:grid;grid-template-columns:auto minmax(0,auto) 40px;align-items:center;justify-content:center;gap:8px;width:100%;max-width:920px}.status-home-btn{width:40px;min-width:40px;min-height:40px;padding:0!important;font-size:19px}.status-actions-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:920px;width:100%}.status-actions-row>.status-gold-btn{width:100%;min-width:0;white-space:normal;text-align:center}.room-error-details{max-width:min(90vw,620px);text-align:left;font:12px/1.4 system-ui,sans-serif;color:#765c37}.room-error-details summary{cursor:pointer;text-align:center}.room-error-details code{display:block;margin-top:8px;padding:10px;border-radius:8px;background:#fff9ee;overflow-wrap:anywhere;white-space:pre-wrap}@media(max-width:600px){.status-top-info{grid-template-columns:auto minmax(0,1fr) 36px;gap:5px}.status-room-pill{gap:3px;padding:4px 7px}.status-room-pill .room-sub{font-size:8px}.status-room-pill .room-code-tag{font-size:clamp(11px,3.5vw,15px);letter-spacing:.5px}.status-conn-pill{justify-content:center;gap:4px;padding:5px 6px;font-size:clamp(9px,2.8vw,11px);white-space:nowrap}.status-home-btn{width:36px;min-width:36px;min-height:36px;font-size:18px}.status-actions-row{gap:7px}.status-actions-row>.status-gold-btn{gap:4px;padding:6px 4px;font-size:clamp(10px,2.9vw,13px);line-height:1.1}}
+/* V23: botones grandes junto al cartón en apaisado */
+.landscape-claim-rail{display:none}
+@media (orientation:landscape) and (max-height:600px){
+  body.is-playing-shared-card .cards-stage-grid{flex-direction:row!important;align-items:stretch!important;gap:10px!important}
+  body.is-playing-shared-card .card-unit.is-landscape-active{display:flex!important;flex-direction:row;align-items:stretch;gap:10px;width:100%;min-width:0}
+  body.is-playing-shared-card .card-unit.is-landscape-active>.bingo-card{flex:1;min-width:0;width:auto!important}
+  body.is-playing-shared-card .landscape-claim-rail{display:flex;flex:0 0 clamp(112px,17vw,220px);flex-direction:column;justify-content:center;gap:14px;min-width:0;padding:6px 2px}
+  body.is-playing-shared-card .landscape-claim-btn{width:100%;min-height:clamp(76px,19vh,150px);padding:10px 6px;font:700 clamp(16px,2.4vw,26px)/1.15 system-ui,sans-serif;white-space:normal;touch-action:manipulation}
+  body.is-playing-shared-card .card-heading .line-mini,
+  body.is-playing-shared-card .card-heading .bingo-mini{display:none!important}
+}
